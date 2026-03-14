@@ -99,19 +99,10 @@ nav#main-nav {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 100px 2rem 4rem;
+  padding: 60px 2rem 4rem;
   position: relative;
   overflow: hidden;
-  background-size: cover;
-  background-position: center;
-}
-
-#hero::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: rgba(10, 20, 18, 0.72);
-  z-index: 0;
+  background: linear-gradient(135deg, #0A1A12 0%, #111C1A 40%, #0D2018 100%);
 }
 
 .hero-inner {
@@ -673,8 +664,28 @@ footer {
   color: var(--accent);
 }
 
-.hero-grid-bg, .hero-glow {
-  display: none;
+.hero-grid-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(52, 211, 153, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(52, 211, 153, 0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.hero-glow {
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 800px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.08) 0%, transparent 70%);
+  z-index: 0;
+  pointer-events: none;
 }
 
 .particles {
@@ -768,7 +779,7 @@ nav#main-nav.scrolled {
   </div>
 
   <!-- ── Hero ── -->
-  <section id="hero" style="background-image:url('https://replicate.delivery/xezq/NZnu7K5E37pQJRUtnU0dI9uQwQHPmeg8aPauj1Ek7GHHbYILA/out-0.webp');background-size:cover;background-position:center;">
+  <section id="hero">
     <div class="hero-grid-bg"></div>
     <div class="hero-glow"></div>
     <div class="particles" id="particles-container"></div>
