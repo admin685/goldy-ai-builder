@@ -209,7 +209,10 @@ h1.hero-title {
 .hero-buttons {
   display: flex;
   gap: 1rem;
-  flex-wrap: wrap;
+}
+
+.hero-mascot {
+  flex: 0 0 40%;
 }
 
 .btn-ghost {
@@ -725,7 +728,7 @@ nav#main-nav.scrolled {
   .hamburger { display: flex; }
   .hero-inner { flex-direction: column; text-align: center; }
   .hero-text { flex: none; text-align: center; }
-  .hero-buttons { justify-content: center; }
+  .hero-buttons { justify-content: center; flex-wrap: wrap; }
   .hero-stats { justify-content: center; }
   .hero-headline { font-size: clamp(2rem, 6vw, 3.5rem); }
   .mascot-wrap { display: none; }
