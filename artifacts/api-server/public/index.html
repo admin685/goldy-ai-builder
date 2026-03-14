@@ -25,129 +25,173 @@
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --font-display: 'Bangers', cursive;
   --font-body: 'Nunito', sans-serif;
-  --grid-line: rgba(255, 215, 0, 0.06);
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   line-height: 1.5;
-  padding: 20px;
   min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
 }
 
-.header {
-  text-align: center;
-  padding: 32px 0 16px;
-  border-bottom: 1px solid var(--bg3);
-}
-
-.logo {
-  font-family: var(--font-display);
-  font-size: 2.2rem;
-  color: var(--gold);
-  letter-spacing: 2px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.logo-icon {
-  font-size: 1.6rem;
-}
-
-.subtitle {
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-top: 4px;
-}
-
-.mode-selector {
-  display: flex;
-  flex-direction: row;
-  gap: 8px;
-  justify-content: center;
-  margin: 24px 0;
-  background: var(--bg2);
-  border-radius: 9999px;
-  padding: 4px;
-  width: fit-content;
-  margin-inline: auto;
-}
-
-.mode-btn {
-  font-family: var(--font-body);
-  font-weight: 700;
-  padding: 8px 20px;
-  border-radius: 9999px;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.mode-btn.active {
-  background: var(--gold);
-  color: #0d1117;
-  box-shadow: 0 2px 12px var(--gold-glow);
-}
-
-.canvas-wrap {
-  max-width: 680px;
+/* ── Single centered column ── */
+#app {
+  max-width: 700px;
   margin: 0 auto;
+  padding: 28px 20px 60px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+/* ── Header: logo left, tabs right ── */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--bg3);
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--gold);
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+}
+
+.logo img {
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
 .tab-bar {
   display: flex;
-  flex-direction: row;
-  border-bottom: 1px solid var(--bg3);
-  margin-bottom: 20px;
+  gap: 4px;
+  background: var(--bg2);
+  border-radius: 9999px;
+  padding: 4px;
 }
 
 .tab-btn {
   font-family: var(--font-body);
   font-weight: 700;
-  padding: 10px 20px;
+  font-size: 0.85rem;
+  padding: 7px 16px;
+  border-radius: 9999px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  border-bottom: 3px solid transparent;
   transition: var(--transition);
+  white-space: nowrap;
 }
 
 .tab-btn.active {
-  color: var(--gold);
-  border-bottom-color: var(--gold);
+  background: var(--gold);
+  color: #0d1117;
+  box-shadow: 0 2px 12px var(--gold-glow);
 }
 
+/* ── Cards ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--bg3);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+/* ── Textarea ── */
+textarea#idea {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--bg3);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 110px;
+  outline: none;
+  transition: var(--transition);
+  margin-bottom: 14px;
+}
+
+textarea#idea:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+}
+
+textarea#idea::placeholder { color: var(--text-muted); }
+
+/* ── Buttons ── */
+.btn-build {
+  width: 100%;
+  padding: 15px;
+  background: var(--gold);
+  color: #0d1117;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  letter-spacing: 2px;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 4px 20px var(--gold-glow);
+  margin-bottom: 14px;
+}
+
+.btn-build:hover { transform: translateY(-2px) scale(1.01); filter: brightness(1.08); }
+.btn-build:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-secondary {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--bg3);
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover { border-color: var(--gold); }
+
+.btn-reset {
+  margin-top: 20px;
+  background: var(--bg3);
+  color: var(--text-muted);
+  border: 1px solid var(--bg3);
+  padding: 9px 18px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-reset:hover { border-color: var(--gold); color: var(--text); }
+
+/* ── Example chips ── */
 .examples {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .example-chip {
-  background: var(--bg2);
+  background: var(--bg);
   border: 1px solid var(--bg3);
   font-family: var(--font-body);
   font-size: 0.8rem;
@@ -155,50 +199,83 @@ body {
   border-radius: 9999px;
   cursor: pointer;
   transition: var(--transition);
+  color: var(--text-muted);
 }
 
-.example-chip:hover {
-  border-color: var(--gold);
-  color: var(--gold);
+.example-chip:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ── Import panel ── */
+#import-panel { display: none; }
+
+.mode-selector {
+  display: flex;
+  gap: 6px;
+  background: var(--bg);
+  border-radius: 9999px;
+  padding: 4px;
+  width: fit-content;
+  margin-bottom: 18px;
 }
+
+.mode-btn {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.mode-btn.active { background: var(--gold); color: #0d1117; }
 
 .drop-zone {
   border: 2px dashed var(--bg3);
   border-radius: var(--radius-lg);
-  padding: 48px 24px;
+  padding: 40px 24px;
   text-align: center;
   cursor: pointer;
   transition: var(--transition);
   position: relative;
+  margin-bottom: 16px;
 }
 
-.drop-zone:hover {
-  border-color: var(--gold);
-  background: rgba(255, 215, 0, 0.03);
+.drop-zone:hover { border-color: var(--gold); background: rgba(255, 215, 0, 0.03); }
+.drop-zone.drag-over { border-color: var(--gold); background: rgba(255, 215, 0, 0.06); }
+
+.drop-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
 }
 
-.drop-icon {
-  font-size: 2.5rem;
-  margin-bottom: 12px;
-  opacity: 0.6;
-}
-
-.drop-hint {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
+.drop-icon { font-size: 2.2rem; margin-bottom: 10px; }
 
 .drop-label {
   font-family: var(--font-body);
   font-weight: 700;
   color: var(--text);
-  font-size: 1rem;
+  font-size: 0.95rem;
+}
+
+.drop-hint {
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.drop-selected {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--green);
+  font-weight: 700;
 }
 
 .url-input {
   width: 100%;
-  background: var(--bg2);
+  background: var(--bg);
   border: 1px solid var(--bg3);
   color: var(--text);
   border-radius: var(--radius);
@@ -207,356 +284,319 @@ body {
   font-size: 0.95rem;
   outline: none;
   transition: var(--transition);
+  margin-bottom: 8px;
 }
 
-.url-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px var(--gold-glow);
-}
+.url-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
 
-.btn-build {
-  width: 100%;
-  padding: 16px;
-  background: var(--gold);
-  color: #0d1117;
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  letter-spacing: 2px;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: var(--transition);
-  box-shadow: 0 4px 20px var(--gold-glow);
-}
-
-.btn-build:hover {
-  transform: translateY(-2px) scale(1.01);
-  filter: brightness(1.08);
-}
-
-.btn-secondary {
-  background: var(--bg2);
-  color: var(--text);
-  border: 1px solid var(--bg3);
-  padding: 10px 20px;
-  border-radius: var(--radius);
-  font-family: var(--font-body);
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.btn-secondary:hover {
-  border-color: var(--gold);
-}
-
-.btn-reset {
-  background: var(--bg2);
+.url-hint {
+  font-size: 0.8rem;
   color: var(--text-muted);
-  border: 1px solid var(--bg3);
-  padding: 8px 16px;
+  margin-bottom: 16px;
+}
+
+/* ── Status section ── */
+#status-section { display: none; }
+
+/* Canvas animation inside status card */
+#canvas-wrap {
+  margin-bottom: 16px;
   border-radius: var(--radius);
-  font-family: var(--font-body);
-  font-weight: 700;
-  cursor: pointer;
-  transition: var(--transition);
+  overflow: hidden;
+  background: #090d12;
 }
 
-.btn-reset:hover {
-  border-color: var(--gold);
+#goldy-canvas { display: block; width: 100%; height: 160px; }
+
+.phase-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.progress-wrap {
-  margin: 8px 0;
+.dot {
+  width: 9px; height: 9px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
-.phase-label {
-  font-family: var(--font-body);
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
+.dot.active { background: var(--green); box-shadow: 0 0 6px var(--green); animation: pulse 1.2s ease infinite; }
+
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+#phase-text { font-family: var(--font-body); font-size: 0.88rem; color: var(--text-muted); }
+
+.progress-wrap { margin-bottom: 16px; }
+
+.progress-track {
+  height: 4px;
+  background: var(--bg3);
+  border-radius: 9999px;
+  overflow: hidden;
 }
 
 .progress-bar {
-  height: 4px;
+  height: 100%;
   background: var(--gold);
   border-radius: 9999px;
   transition: width 0.4s ease;
   box-shadow: 0 0 8px var(--gold-glow);
+  width: 0%;
 }
 
 .progress-bar.indeterminate {
   background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease infinite;
+  width: 100%;
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: 200% center;
-  }
-  100% {
-    background-position: -200% center;
-  }
+  0% { background-position: 200% center; }
+  100% { background-position: -200% center; }
 }
 
+/* ── Log panel ── */
 .log-panel {
   background: #090d12;
   border-radius: var(--radius);
   border: 1px solid var(--bg3);
-  padding: 16px;
-  max-height: 280px;
+  padding: 14px 16px;
+  max-height: 260px;
   overflow-y: auto;
   font-family: 'Courier New', monospace;
-  font-size: 0.82rem;
-  line-height: 1.6;
+  font-size: 0.81rem;
+  line-height: 1.65;
 }
 
-.log-entry {
-  display: flex;
-  gap: 12px;
-  padding: 2px 0;
-}
+.log-entry { display: flex; gap: 12px; padding: 1px 0; }
+.log-time { color: var(--text-muted); min-width: 65px; font-size: 0.77rem; flex-shrink: 0; }
+.log-msg-info    { color: var(--text-muted); }
+.log-msg-success { color: var(--green); }
+.log-msg-error   { color: var(--red); }
+.log-msg-warn    { color: #e3b341; }
 
-.log-time {
-  color: var(--text-muted);
-  min-width: 70px;
-  font-size: 0.78rem;
-}
+/* ── Result section ── */
+#result-card { display: none; margin-top: 20px; }
 
-.log-msg-info {
-  color: var(--text-muted);
-}
-
-.log-msg-success {
-  color: var(--green);
-}
-
-.log-msg-error {
-  color: var(--red);
-}
-
-.log-msg-warn {
-  color: #e3b341;
-}
-
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  text-align: center;
-}
-
-.stat {
-  background: var(--bg2);
-  border-radius: var(--radius);
-  padding: 16px;
-  border: 1px solid var(--bg3);
-}
-
-.stat-value {
+.result-title {
   font-family: var(--font-display);
-  font-size: 2rem;
-  color: var(--gold);
-  display: block;
-}
-
-.stat-label {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  text-transform: uppercase;
+  font-size: 1.6rem;
   letter-spacing: 1px;
+  margin-bottom: 16px;
 }
 
-.result-links {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
+.result-title.success { color: var(--green); }
+.result-title.error   { color: var(--red); }
+
+.result-links { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 
 .result-link {
-  background: var(--bg2);
+  background: var(--bg);
   border: 1px solid var(--bg3);
   border-radius: var(--radius);
-  padding: 16px 20px;
+  padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  text-decoration: none;
   transition: var(--transition);
+  gap: 12px;
 }
 
-.result-link:hover {
-  border-color: var(--gold);
-  transform: translateY(-2px);
-}
+.result-link:hover { border-color: var(--gold); transform: translateY(-1px); }
 
 .link-label {
   font-family: var(--font-body);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 1px;
+  margin-bottom: 3px;
 }
 
 .link-url {
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 420px;
+}
+
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  background: var(--bg);
+  border-radius: var(--radius);
+  padding: 14px;
+  border: 1px solid var(--bg3);
+  text-align: center;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  color: var(--gold);
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.copy-btn {
-  background: var(--bg3);
-  border: none;
+.stat-label {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
   color: var(--text-muted);
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.78rem;
-  transition: var(--transition);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
-.copy-btn:hover {
-  color: var(--gold);
-  background: var(--bg2);
+/* ── Domain section ── */
+#domain-section { display: none; border-top: 1px solid var(--bg3); margin-top: 20px; padding-top: 20px; }
+
+#domain-section h4 {
+  font-family: var(--font-body);
+  font-weight: 800;
+  margin-bottom: 8px;
 }
+
+#domain-section p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.domain-input-row { display: flex; gap: 10px; margin-bottom: 14px; }
 
 .domain-input {
-  width: 100%;
-  background: var(--bg2);
+  flex: 1;
+  background: var(--bg);
   border: 1px solid var(--bg3);
   color: var(--text);
   border-radius: var(--radius);
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   outline: none;
   transition: var(--transition);
 }
 
-.domain-input:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px var(--gold-glow);
+.domain-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+.btn-domain {
+  background: var(--gold);
+  color: #0d1117;
+  border: none;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-weight: 800;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
 }
 
+.btn-domain:hover { filter: brightness(1.08); }
+
 .dns-panel {
-  background: var(--bg2);
+  display: none;
+  background: var(--bg);
   border: 1px solid var(--bg3);
   border-radius: var(--radius);
   overflow: hidden;
-  margin-top: 16px;
+  margin-bottom: 12px;
 }
 
 .dns-panel-header {
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-weight: 700;
   background: var(--bg3);
-  font-size: 0.9rem;
-}
-
-.check-row {
+  font-size: 0.88rem;
   display: flex;
-  flex-direction: row;
+  justify-content: space-between;
+}
+
+.dns-record {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 0;
+  gap: 10px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--bg3);
-  font-size: 0.85rem;
-}
-
-.check-result.success {
-  color: var(--green);
-}
-
-.check-result.fail {
-  color: var(--red);
+  font-size: 0.83rem;
+  flex-wrap: wrap;
 }
 
 .dns-type {
   background: var(--bg3);
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-family: monospace;
+  font-weight: 700;
 }
 
-.dns-value {
-  font-family: monospace;
-  font-size: 0.82rem;
-  color: var(--gold);
-}
+.dns-value { font-family: monospace; font-size: 0.8rem; color: var(--gold); flex: 1; word-break: break-all; }
 
-.pending {
-  color: var(--text-muted);
-  font-style: italic;
-}
+.dns-status.pending  { color: #e3b341; }
+.dns-status.verified { color: var(--green); }
 
-.card {
-  background: var(--bg2);
-  border: 1px solid var(--bg3);
-  border-radius: var(--radius);
-  padding: 20px;
-}
+.check-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.check-result { font-size: 0.85rem; }
+.check-result.connected { color: var(--green); }
+.check-result.pending   { color: #e3b341; }
+.check-result.error     { color: var(--red); }
 
-.dot {
-  width: 10px;
-  height: 10px;
-  background: var(--text-muted);
-  border-radius: 50%;
-  display: inline-block;
-  margin-right: 8px;
-}
-
-.dot.active {
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
+.copy-btn {
   background: var(--bg3);
+  border: none;
+  color: var(--text-muted);
+  padding: 3px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: var(--transition);
 }
+.copy-btn:hover { color: var(--gold); }
 
-::-webkit-scrollbar-thumb {
-  background: var(--gold);
-  border-radius: 8px;
-}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 6px; }
   </style>
 </head>
 <body>
+<div id="app">
 
-  <div class="header">
-    <div class="logo"><span class="logo-icon"><img src="https://img.recraft.ai/3jLiny7YtfrwOyakMhY6eRUCBFR8QIBJFjLaExm8ujE/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/b9f0f845-0009-4f3a-b98a-bc3e2b6865ba" alt="Goldy" style="height:36px;width:36px;object-fit:contain;vertical-align:middle;margin-right:4px;" /></span> GOLDY BUILDS</div>
-    <div class="subtitle">Describe your project. We build it.</div>
-  </div>
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header id="header">
+    <div class="logo">
+      <img src="https://img.recraft.ai/3jLiny7YtfrwOyakMhY6eRUCBFR8QIBJFjLaExm8ujE/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/b9f0f845-0009-4f3a-b98a-bc3e2b6865ba" alt="Goldy" />
+      GOLDY BUILDS
+    </div>
+    <div class="tab-bar" id="tab-bar">
+      <button class="tab-btn active" id="tab-build"   onclick="switchTab('build')">⚡ Build New</button>
+      <button class="tab-btn"        id="tab-import"  onclick="switchTab('import')">📦 Import & Rebuild</button>
+    </div>
+  </header>
 
-  <!-- Tab switcher -->
-  <div class="tab-bar" id="tab-bar">
-    <button class="tab-btn active" id="tab-build" onclick="switchTab('build')">⚡ Build New Project</button>
-    <button class="tab-btn" id="tab-import" onclick="switchTab('import')">📦 Import & Rebuild</button>
-  </div>
-
-  <!-- Input card -->
+  <!-- ── Input card ─────────────────────────────────────────────────────── -->
   <div class="card" id="input-card">
 
     <!-- Build New panel -->
     <div id="build-panel">
-      <textarea
-        id="idea"
-        placeholder="What do you want to build today?&#10;&#10;Example: A todo app with a dark theme, local storage, and priority tags"
-      ></textarea>
-
-      <button class="btn-build" id="build-btn" onclick="startBuild()">
-        Build It →
-      </button>
-
+      <textarea id="idea" placeholder="What do you want to build today?&#10;&#10;Example: A todo app with dark theme, local storage, and priority tags"></textarea>
+      <button class="btn-build" id="build-btn" onclick="startBuild()">Build It →</button>
       <div class="examples">
         <span class="example-chip" onclick="fillExample(this)">Todo list web app with dark theme</span>
         <span class="example-chip" onclick="fillExample(this)">Landing page for a SaaS product</span>
@@ -567,126 +607,87 @@ body {
     </div>
 
     <!-- Import & Rebuild panel -->
-    <div class="import-panel" id="import-panel">
-
-      <div style="margin-bottom:18px">
-        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Import source</div>
-        <div class="mode-selector">
-          <button class="mode-btn active" id="mode-zip" onclick="setMode('zip')">📁 ZIP Upload</button>
-          <button class="mode-btn" id="mode-github" onclick="setMode('github')">🐙 GitHub URL</button>
-          <button class="mode-btn" id="mode-replit" onclick="setMode('replit')">🔵 Replit URL</button>
-        </div>
+    <div id="import-panel">
+      <div style="font-size:0.78rem;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Import Source</div>
+      <div class="mode-selector">
+        <button class="mode-btn active" id="mode-zip"    onclick="setMode('zip')">📁 ZIP</button>
+        <button class="mode-btn"        id="mode-github" onclick="setMode('github')">🐙 GitHub</button>
+        <button class="mode-btn"        id="mode-replit" onclick="setMode('replit')">🔵 Replit</button>
       </div>
 
-      <!-- ZIP drop zone -->
       <div id="zip-area">
-        <div
-          class="drop-zone"
-          id="drop-zone"
-          ondragover="onDragOver(event)"
-          ondragleave="onDragLeave(event)"
-          ondrop="onDrop(event)"
-        >
+        <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
           <input type="file" id="zip-file" accept=".zip" onchange="onFileSelect(event)" />
           <div class="drop-icon">📦</div>
-          <div class="drop-label">
-            <strong>Click to choose</strong> or drag & drop your ZIP
-          </div>
-          <div class="drop-hint">Supports any project: React, Vue, Flask, plain HTML, etc.</div>
+          <div class="drop-label"><strong>Click to choose</strong> or drag & drop your ZIP</div>
+          <div class="drop-hint">Supports any project: React, Vue, Flask, plain HTML…</div>
           <div class="drop-selected" id="drop-selected" style="display:none"></div>
         </div>
       </div>
 
-      <!-- GitHub URL -->
-      <div class="url-input-wrap" id="github-area">
-        <input
-          type="text"
-          class="url-input"
-          id="github-url"
-          placeholder="https://github.com/username/repository"
-          onkeydown="if(event.key==='Enter') startImport()"
-        />
-        <div class="url-hint">Paste any public GitHub repository URL. Private repos work too if your GitHub token has access.</div>
+      <div id="github-area" style="display:none">
+        <input type="text" class="url-input" id="github-url" placeholder="https://github.com/username/repository" onkeydown="if(event.key==='Enter') startImport()" />
+        <div class="url-hint">Paste any public GitHub repository URL.</div>
       </div>
 
-      <!-- Replit URL -->
-      <div class="url-input-wrap" id="replit-area">
-        <input
-          type="text"
-          class="url-input"
-          id="replit-url"
-          placeholder="https://replit.com/@username/project-name"
-          onkeydown="if(event.key==='Enter') startImport()"
-        />
-        <div class="url-hint">Paste a public Replit project URL. The project must be public for ZIP export to work.</div>
+      <div id="replit-area" style="display:none">
+        <input type="text" class="url-input" id="replit-url" placeholder="https://replit.com/@username/project-name" onkeydown="if(event.key==='Enter') startImport()" />
+        <div class="url-hint">Paste a public Replit project URL.</div>
       </div>
 
-      <button class="btn-build" id="import-btn" onclick="startImport()" style="margin-top:20px">
-        Import & Rebuild →
-      </button>
+      <button class="btn-build" id="import-btn" onclick="startImport()">Import & Rebuild →</button>
 
-      <div style="margin-top:14px;padding:12px 16px;background:rgba(245,197,24,0.05);border:1px solid rgba(245,197,24,0.15);border-radius:8px;font-size:0.82rem;color:var(--text-muted)">
-        <strong style="color:var(--gold)">How it works:</strong> Goldy reads all your source files, sends them to Claude with the instruction to analyze and rebuild the project as a clean static web app, then deploys it to Vercel automatically.
+      <div style="padding:12px 14px;background:rgba(245,197,24,0.05);border:1px solid rgba(245,197,24,0.15);border-radius:8px;font-size:0.81rem;color:var(--text-muted)">
+        <strong style="color:var(--gold)">How it works:</strong> Goldy reads your source files, rebuilds them as a clean static web app via Claude, and deploys to Vercel automatically.
       </div>
     </div>
+
   </div>
 
-  <!-- Status card -->
+  <!-- ── Status card (hidden until build starts) ────────────────────────── -->
   <div class="card" id="status-section">
 
-    <div class="canvas-wrap">
-      <canvas id="goldy-canvas" width="760" height="180"></canvas>
+    <!-- Canvas animation lives here, inside the build card -->
+    <div id="canvas-wrap">
+      <canvas id="goldy-canvas" width="660" height="160"></canvas>
     </div>
 
-    <div class="phase-label">
-      <div class="dot"></div>
-      <span id="phase-text">Initializing...</span>
+    <div class="phase-row">
+      <div class="dot active" id="status-dot"></div>
+      <span id="phase-text">Initializing…</span>
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-bar indeterminate" id="progress-bar"></div>
+      <div class="progress-track">
+        <div class="progress-bar indeterminate" id="progress-bar"></div>
+      </div>
     </div>
 
     <div class="log-panel" id="log-panel"></div>
 
-    <!-- Result card -->
+    <!-- Result area (shown after done/error) -->
     <div id="result-card">
-      <h3 id="result-title"></h3>
+      <h3 class="result-title" id="result-title"></h3>
       <div class="result-links" id="result-links"></div>
-      <div class="stats-row" id="stats-row"></div>
+      <div class="stats-row"   id="stats-row"></div>
 
-      <!-- Domain connection section -->
-      <div class="domain-section" id="domain-section">
+      <div id="domain-section">
         <h4>Connect a Custom Domain</h4>
-        <p>Enter your domain name to get the DNS records you need to add. Your domain will point to this deployment on Vercel.</p>
-
+        <p>Enter your domain to get the DNS records to add at your registrar.</p>
         <div class="domain-input-row">
-          <input
-            type="text"
-            class="domain-input"
-            id="domain-input"
-            placeholder="e.g. myapp.com or app.mysite.com"
-            onkeydown="if(event.key==='Enter') connectDomain()"
-          />
-          <button class="btn-domain" id="domain-btn" onclick="connectDomain()">
-            Connect Domain →
-          </button>
+          <input type="text" class="domain-input" id="domain-input" placeholder="e.g. myapp.com" onkeydown="if(event.key==='Enter') connectDomain()" />
+          <button class="btn-domain" id="domain-btn" onclick="connectDomain()">Connect →</button>
         </div>
-
-        <!-- DNS records panel -->
         <div class="dns-panel" id="dns-panel">
           <div class="dns-panel-header">
             <span>DNS Records to Add</span>
             <span class="dns-status pending" id="dns-status">Pending</span>
           </div>
           <div id="dns-records-list"></div>
-          <div class="dns-instructions" id="dns-instructions"></div>
+          <div class="dns-instructions" id="dns-instructions" style="padding:12px 14px;font-size:0.8rem;color:var(--text-muted)"></div>
         </div>
-
         <div class="check-row" id="check-row" style="display:none">
-          <button class="btn-secondary" id="check-btn" onclick="checkDomainConnection()">
-            Check Connection
-          </button>
+          <button class="btn-secondary" id="check-btn" onclick="checkDomainConnection()">Check Connection</button>
           <span class="check-result" id="check-result"></span>
         </div>
       </div>
@@ -696,543 +697,530 @@ body {
 
   </div>
 
-  <script>
-    const API = '/api';
+</div><!-- /#app -->
 
-    let pollTimer    = null;
-    let animFrame    = null;
-    let lastLogCount = 0;
-    let particles    = [];
-    let bots         = [];
-    let activeDomain = '';
-    let selectedFile  = null;
-    let activeTab    = 'build';
-    let importMode   = 'zip';
+<script>
+  const API = '/api';
 
-    // ── Tab switcher ──────────────────────────────────────────────────────
-    function switchTab(tab) {
-      activeTab = tab;
-      document.getElementById('tab-build').classList.toggle('active', tab === 'build');
-      document.getElementById('tab-import').classList.toggle('active', tab === 'import');
-      document.getElementById('build-panel').style.display  = tab === 'build'  ? 'block' : 'none';
-      document.getElementById('import-panel').style.display = tab === 'import' ? 'block' : 'none';
+  let pollTimer    = null;
+  let animFrame    = null;
+  let lastLogCount = 0;
+  let particles    = [];
+  let bots         = [];
+  let activeDomain = '';
+  let selectedFile = null;
+  let activeTab    = 'build';
+  let importMode   = 'zip';
+
+  // ── Initialise ──────────────────────────────────────────────────────────
+  switchTab('build');
+  setMode('zip');
+
+  // ── Tab switcher ────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    activeTab = tab;
+    document.getElementById('tab-build').classList.toggle('active', tab === 'build');
+    document.getElementById('tab-import').classList.toggle('active', tab === 'import');
+    document.getElementById('build-panel').style.display  = tab === 'build'  ? 'block' : 'none';
+    document.getElementById('import-panel').style.display = tab === 'import' ? 'block' : 'none';
+  }
+
+  // ── Import mode selector ────────────────────────────────────────────────
+  function setMode(mode) {
+    importMode = mode;
+    ['zip', 'github', 'replit'].forEach(m => {
+      document.getElementById('mode-' + m).classList.toggle('active', m === mode);
+      const area = document.getElementById(m + '-area');
+      if (area) area.style.display = m === mode ? 'block' : 'none';
+    });
+  }
+
+  // ── Example chips ───────────────────────────────────────────────────────
+  function fillExample(el) {
+    document.getElementById('idea').value = el.textContent;
+    document.getElementById('idea').focus();
+  }
+
+  // ── Drop zone ───────────────────────────────────────────────────────────
+  function onDragOver(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.add('drag-over');
+  }
+
+  function onDragLeave() {
+    document.getElementById('drop-zone').classList.remove('drag-over');
+  }
+
+  function onDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.zip')) {
+      selectedFile = file;
+      showFileSelected(file.name);
+    } else {
+      alert('Please drop a .zip file');
     }
+  }
 
-    // ── Import mode selector ──────────────────────────────────────────────
-    function setMode(mode) {
-      importMode = mode;
-      ['zip','github','replit'].forEach(m => {
-        document.getElementById('mode-' + m).classList.toggle('active', m === mode);
-        const area = document.getElementById(m + '-area');
-        if (area) area.style.display = m === mode ? 'block' : 'none';
+  function onFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) { selectedFile = file; showFileSelected(file.name); }
+  }
+
+  function showFileSelected(name) {
+    const sel = document.getElementById('drop-selected');
+    sel.textContent = '✓ ' + name;
+    sel.style.display = 'block';
+    document.querySelector('.drop-icon').textContent = '✅';
+  }
+
+  // ── Canvas animation ────────────────────────────────────────────────────
+  const canvas = document.getElementById('goldy-canvas');
+  const ctx    = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const w = canvas.parentElement.getBoundingClientRect().width;
+    canvas.width  = w * devicePixelRatio;
+    canvas.height = 160 * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
+    canvas.style.height = '160px';
+  }
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * 660, y: Math.random() * 160,
+        r: Math.random() * 1.5 + 0.3,
+        vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+        a: Math.random() * 0.6 + 0.2,
       });
-      // url-input-wrap visibility
-      document.getElementById('github-area').style.display = mode === 'github' ? 'block' : 'none';
-      document.getElementById('replit-area').style.display = mode === 'replit' ? 'block' : 'none';
-      document.getElementById('zip-area').style.display    = mode === 'zip'    ? 'block' : 'none';
     }
+  }
 
-    // ── Drop zone ─────────────────────────────────────────────────────────
-    function onDragOver(e) {
-      e.preventDefault();
-      document.getElementById('drop-zone').classList.add('drag-over');
-    }
-
-    function onDragLeave(e) {
-      document.getElementById('drop-zone').classList.remove('drag-over');
-    }
-
-    function onDrop(e) {
-      e.preventDefault();
-      document.getElementById('drop-zone').classList.remove('drag-over');
-      const file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith('.zip')) {
-        selectedFile = file;
-        showFileSelected(file.name);
-      } else {
-        alert('Please drop a .zip file');
-      }
-    }
-
-    function onFileSelect(e) {
-      const file = e.target.files[0];
-      if (file) {
-        selectedFile = file;
-        showFileSelected(file.name);
-      }
-    }
-
-    function showFileSelected(name) {
-      const sel = document.getElementById('drop-selected');
-      sel.textContent = '✓ ' + name;
-      sel.style.display = 'block';
-      document.querySelector('.drop-icon').textContent = '✅';
-    }
-
-    // ── Canvas animation ─────────────────────────────────────────────────
-    const canvas = document.getElementById('goldy-canvas');
-    const ctx    = canvas.getContext('2d');
-
-    function resizeCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width  = rect.width * devicePixelRatio;
-      canvas.height = 180   * devicePixelRatio;
-      ctx.scale(devicePixelRatio, devicePixelRatio);
-    }
-
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < 40; i++) {
-        particles.push({
-          x: Math.random() * 760, y: Math.random() * 180,
-          r: Math.random() * 1.5 + 0.3,
-          vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
-          a: Math.random() * 0.6 + 0.2,
-        });
-      }
-    }
-
-    function initBots() {
-      const colors = ['#f5c518','#ffd700','#58a6ff','#3fb950','#f0883e'];
-      bots = [];
-      for (let i = 0; i < 5; i++) {
-        bots.push({
-          x: 60 + i * 130, y: 90,
-          tx: Math.random() * 700 + 30, ty: Math.random() * 120 + 30,
-          color: colors[i], size: 14 + Math.random() * 8,
-          speed: 0.8 + Math.random() * 0.8,
-          angle: 0, angleSpeed: (Math.random() - 0.5) * 0.08, tick: 0,
-        });
-      }
-    }
-
-    function drawBot(b) {
-      ctx.save();
-      ctx.translate(b.x, b.y);
-      ctx.rotate(b.angle);
-      ctx.fillStyle = b.color + '33';
-      ctx.strokeStyle = b.color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(-b.size/2, -b.size/2, b.size, b.size, 4);
-      ctx.fill(); ctx.stroke();
-      ctx.fillStyle = b.color;
-      ctx.beginPath();
-      ctx.arc(-b.size*0.2, -b.size*0.1, b.size*0.12, 0, Math.PI*2);
-      ctx.arc( b.size*0.2, -b.size*0.1, b.size*0.12, 0, Math.PI*2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.moveTo(0, -b.size/2); ctx.lineTo(0, -b.size/2 - 8); ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(0, -b.size/2 - 10, 3, 0, Math.PI*2);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    function drawGrid() {
-      const W = canvas.width / devicePixelRatio;
-      const H = canvas.height / devicePixelRatio;
-      ctx.strokeStyle = 'rgba(48,54,61,0.5)';
-      ctx.lineWidth = 0.5;
-      for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
-      for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
-    }
-
-    function animate() {
-      const W = canvas.width / devicePixelRatio;
-      const H = canvas.height / devicePixelRatio;
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#0a0e14'; ctx.fillRect(0, 0, W, H);
-      drawGrid();
-      particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy;
-        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
-        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-        ctx.fillStyle = `rgba(245,197,24,${p.a})`; ctx.fill();
+  function initBots() {
+    const colors = ['#f5c518','#ffd700','#58a6ff','#3fb950','#f0883e'];
+    bots = [];
+    for (let i = 0; i < 5; i++) {
+      bots.push({
+        x: 60 + i * 110, y: 80,
+        tx: Math.random() * 600 + 30, ty: Math.random() * 110 + 25,
+        color: colors[i], size: 13 + Math.random() * 7,
+        speed: 0.8 + Math.random() * 0.8,
+        angle: 0, angleSpeed: (Math.random() - 0.5) * 0.08, tick: 0,
       });
-      bots.forEach(b => {
-        b.tick++;
-        const dx = b.tx - b.x, dy = b.ty - b.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if (dist < 5) {
-          b.tx = Math.random() * (W - 60) + 30;
-          b.ty = Math.random() * (H - 40) + 20;
-        } else {
-          b.x += (dx / dist) * b.speed;
-          b.y += (dy / dist) * b.speed;
+    }
+  }
+
+  function drawBot(b) {
+    ctx.save();
+    ctx.translate(b.x, b.y);
+    ctx.rotate(b.angle);
+    ctx.fillStyle = b.color + '33';
+    ctx.strokeStyle = b.color;
+    ctx.lineWidth = 1.5;
+    // helmet
+    ctx.beginPath();
+    ctx.arc(0, -b.size * 0.55, b.size * 0.35, Math.PI, 0);
+    ctx.fill(); ctx.stroke();
+    // head
+    ctx.beginPath();
+    ctx.roundRect(-b.size * 0.32, -b.size * 0.5, b.size * 0.64, b.size * 0.46, 4);
+    ctx.fill(); ctx.stroke();
+    // eyes
+    ctx.fillStyle = b.color;
+    ctx.beginPath(); ctx.arc(-b.size * 0.1, -b.size * 0.3, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc( b.size * 0.1, -b.size * 0.3, 3, 0, Math.PI * 2); ctx.fill();
+    // body
+    ctx.fillStyle = b.color + '44';
+    ctx.beginPath();
+    ctx.roundRect(-b.size * 0.36, -b.size * 0.04, b.size * 0.72, b.size * 0.58, 5);
+    ctx.fill(); ctx.stroke();
+    // arms
+    ctx.strokeStyle = b.color; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(-b.size * 0.36, b.size * 0.1); ctx.lineTo(-b.size * 0.62, b.size * 0.32); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( b.size * 0.36, b.size * 0.1); ctx.lineTo( b.size * 0.62, b.size * 0.32); ctx.stroke();
+    // legs
+    ctx.beginPath(); ctx.moveTo(-b.size * 0.15, b.size * 0.54); ctx.lineTo(-b.size * 0.18, b.size * 0.8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo( b.size * 0.15, b.size * 0.54); ctx.lineTo( b.size * 0.18, b.size * 0.8); ctx.stroke();
+    ctx.restore();
+  }
+
+  function animate() {
+    const W = canvas.width / devicePixelRatio;
+    const H = canvas.height / devicePixelRatio;
+    ctx.clearRect(0, 0, W, H);
+
+    // grid dots
+    ctx.fillStyle = 'rgba(255,215,0,0.07)';
+    for (let x = 0; x < W; x += 30) {
+      for (let y = 0; y < H; y += 30) {
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // particles
+    for (const p of particles) {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.fillStyle = `rgba(255,215,0,${p.a})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // bots
+    for (const b of bots) {
+      const dx = b.tx - b.x, dy = b.ty - b.y, dist = Math.hypot(dx, dy);
+      if (dist < 4) { b.tx = Math.random() * (W - 60) + 30; b.ty = Math.random() * (H - 40) + 20; }
+      b.x += (dx / dist) * b.speed; b.y += (dy / dist) * b.speed;
+      b.angle += b.angleSpeed;
+      b.tick++;
+      if (b.tick % 90 === 0) {
+        b.speed = 0.8 + Math.random() * 0.8;
+        b.angleSpeed = (Math.random() - 0.5) * 0.08;
+      }
+      drawBot(b);
+    }
+
+    // sparks between bots
+    if (bots.length >= 2) {
+      for (let i = 0; i < bots.length - 1; i++) {
+        const a = bots[i], b2 = bots[i + 1];
+        const d = Math.hypot(b2.x - a.x, b2.y - a.y);
+        if (d < 140) {
+          ctx.save();
+          ctx.strokeStyle = `rgba(255,215,0,${0.12 * (1 - d / 140)})`;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 5]);
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b2.x, b2.y); ctx.stroke();
+          ctx.restore();
         }
-        b.angle += b.angleSpeed;
-        ctx.beginPath();
-        ctx.moveTo(b.x, b.y);
-        ctx.lineTo(b.x - (dx/dist)*20, b.y - (dy/dist)*20);
-        ctx.strokeStyle = b.color + '30'; ctx.lineWidth = 2; ctx.stroke();
-        drawBot(b);
+      }
+    }
+
+    animFrame = requestAnimationFrame(animate);
+  }
+
+  function startAnimation() {
+    if (animFrame) return;
+    resizeCanvas();
+    initParticles();
+    initBots();
+    animate();
+  }
+
+  function stopAnimation() {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // ── Build ───────────────────────────────────────────────────────────────
+  async function startBuild() {
+    const idea = document.getElementById('idea').value.trim();
+    if (!idea) { document.getElementById('idea').focus(); return; }
+
+    document.getElementById('build-btn').disabled = true;
+    showStatus();
+    startAnimation();
+
+    try {
+      const res = await fetch(`${API}/build`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idea }),
       });
-      ctx.fillStyle = 'rgba(245,197,24,0.12)';
-      ctx.font = 'bold 72px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('⚒️', W/2, H/2 + 28);
-      animFrame = requestAnimationFrame(animate);
+      if (!res.ok) { const d = await res.json(); showError(d.error || 'Failed to start build'); return; }
+      pollStatus();
+    } catch (e) {
+      showError(e.message);
     }
+  }
 
-    function startAnimation() {
-      resizeCanvas(); initParticles(); initBots();
-      if (animFrame) cancelAnimationFrame(animFrame);
-      animFrame = requestAnimationFrame(animate);
-    }
+  // ── Import ──────────────────────────────────────────────────────────────
+  async function startImport() {
+    document.getElementById('import-btn').disabled = true;
+    showStatus();
+    startAnimation();
 
-    function stopAnimation() {
-      if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-    }
-
-    // ── Shared: show status section ───────────────────────────────────────
-    function showStatusSection() {
-      document.getElementById('tab-bar').style.display         = 'none';
-      document.getElementById('input-card').style.display      = 'none';
-      document.getElementById('status-section').style.display  = 'block';
-      document.getElementById('result-card').style.display     = 'none';
-      document.getElementById('domain-section').style.display  = 'none';
-      document.getElementById('dns-panel').style.display       = 'none';
-      document.getElementById('log-panel').innerHTML            = '';
-      lastLogCount  = 0;
-      activeDomain  = '';
-      startAnimation();
-    }
-
-    // ── Build flow ────────────────────────────────────────────────────────
-    function fillExample(el) { document.getElementById('idea').value = el.textContent; }
-
-    async function startBuild() {
-      const idea = document.getElementById('idea').value.trim();
-      if (!idea) { alert('Please describe your project first!'); return; }
-
-      showStatusSection();
-
-      try {
-        const res  = await fetch(`${API}/build`, {
+    try {
+      let res;
+      if (importMode === 'zip') {
+        if (!selectedFile) { alert('Please select a ZIP file first'); document.getElementById('import-btn').disabled = false; return; }
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        const hint = '';
+        if (hint) fd.append('hint', hint);
+        res = await fetch(`${API}/import`, { method: 'POST', body: fd });
+      } else {
+        const urlVal = importMode === 'github'
+          ? document.getElementById('github-url').value.trim()
+          : document.getElementById('replit-url').value.trim();
+        if (!urlVal) { alert('Please enter a URL'); document.getElementById('import-btn').disabled = false; return; }
+        res = await fetch(`${API}/import`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idea }),
+          body: JSON.stringify({ url: urlVal }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Build request failed');
-        pollTimer = setInterval(pollStatus, 3000);
-        pollStatus();
-      } catch (e) {
-        showError(e.message);
       }
+
+      if (!res.ok) { const d = await res.json(); showError(d.error || 'Failed to start import'); return; }
+      pollStatus();
+    } catch (e) {
+      showError(e.message);
     }
+  }
 
-    // ── Import flow ───────────────────────────────────────────────────────
-    async function startImport() {
-      if (importMode === 'zip') {
-        if (!selectedFile) { alert('Please select a ZIP file first'); return; }
-      } else if (importMode === 'github') {
-        const url = document.getElementById('github-url').value.trim();
-        if (!url) { document.getElementById('github-url').focus(); return; }
-      } else if (importMode === 'replit') {
-        const url = document.getElementById('replit-url').value.trim();
-        if (!url) { document.getElementById('replit-url').focus(); return; }
-      }
+  // ── Status polling ──────────────────────────────────────────────────────
+  function showStatus() {
+    document.getElementById('input-card').style.display    = 'none';
+    document.getElementById('status-section').style.display = 'block';
+    document.getElementById('result-card').style.display   = 'none';
+    document.getElementById('log-panel').innerHTML = '';
+    document.getElementById('result-links').innerHTML = '';
+    document.getElementById('stats-row').innerHTML = '';
+    document.getElementById('domain-section').style.display = 'none';
+    document.getElementById('dns-panel').style.display = 'none';
+    document.getElementById('check-row').style.display = 'none';
+    lastLogCount = 0;
+    activeDomain = '';
+    const bar = document.getElementById('progress-bar');
+    bar.className = 'progress-bar indeterminate';
+    document.getElementById('status-dot').classList.add('active');
+  }
 
-      showStatusSection();
-
-      try {
-        let res;
-
-        if (importMode === 'zip') {
-          const formData = new FormData();
-          formData.append('file', selectedFile);
-          res = await fetch(`${API}/import`, {
-            method: 'POST',
-            body: formData,
-          });
-        } else {
-          const url = importMode === 'github'
-            ? document.getElementById('github-url').value.trim()
-            : document.getElementById('replit-url').value.trim();
-          res = await fetch(`${API}/import`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mode: importMode, url }),
-          });
-        }
-
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Import request failed');
-        pollTimer = setInterval(pollStatus, 3000);
-        pollStatus();
-      } catch (e) {
-        showError(e.message);
-      }
-    }
-
-    // ── Poll status (shared) ──────────────────────────────────────────────
-    async function pollStatus() {
+  function pollStatus() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
       try {
         const res  = await fetch(`${API}/status`);
         const data = await res.json();
-        updateLogs(data.logs || []);
+        appendLogs(data.logs || []);
         updatePhase(data.status, data.logs || []);
         if (data.status === 'done') {
-          clearInterval(pollTimer); stopAnimation(); showResult(data.result);
+          clearInterval(pollTimer); pollTimer = null;
+          stopAnimation();
+          showResult(data.result || {});
         } else if (data.status === 'error') {
-          clearInterval(pollTimer); stopAnimation();
-          showError(data.error || 'An unknown error occurred');
-        }
-      } catch (e) { console.error('Poll error:', e); }
-    }
-
-    function updateLogs(logs) {
-      if (logs.length === lastLogCount) return;
-      const panel = document.getElementById('log-panel');
-      for (let i = lastLogCount; i < logs.length; i++) {
-        const entry = logs[i];
-        const t = new Date(entry.ts).toLocaleTimeString('en-US', { hour12: false });
-        const div = document.createElement('div');
-        div.className = 'log-entry';
-        const msg = entry.msg;
-        let icon = '';
-        if (msg.startsWith('GPT-4o:') || msg.includes('GPT-4o CSS')) icon = '🤖 ';
-        else if (msg.startsWith('FLUX:') || msg.includes('FLUX image') || msg.includes('hero image')) icon = '🖼️ ';
-        else if (msg.startsWith('Recraft:') || msg.includes('Recraft logo') || msg.includes('SVG logo')) icon = '🎨 ';
-        else if (msg.includes('parallel design pipeline') || msg.includes('Design pipeline')) icon = '⚡ ';
-        else if (msg.startsWith('Claude:') || msg.includes('assembling')) icon = '🧠 ';
-        div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${icon}${escHtml(msg)}</span>`;
-        panel.appendChild(div);
-      }
-      panel.scrollTop = panel.scrollHeight;
-      lastLogCount = logs.length;
-    }
-
-    function updatePhase(status, logs) {
-      const last  = logs.length ? logs[logs.length - 1].msg : '';
-      const phase = document.getElementById('phase-text');
-      const bar   = document.getElementById('progress-bar');
-      if (status === 'building') {
-        phase.textContent = last || 'Working...';
-        bar.className = 'progress-bar indeterminate';
-      } else if (status === 'done') {
-        phase.textContent = '✓ Build complete!';
-        bar.className = 'progress-bar';
-        bar.style.width = '100%'; bar.style.background = 'var(--green)';
-      } else if (status === 'error') {
-        phase.textContent = '✗ Build failed';
-        bar.className = 'progress-bar';
-        bar.style.width = '100%'; bar.style.background = 'var(--red)';
-      }
-    }
-
-    function showResult(result) {
-      const card = document.getElementById('result-card');
-      card.className  = 'success';
-      card.style.display = 'block';
-      document.getElementById('result-title').className   = 'success-title';
-      document.getElementById('result-title').textContent = '🎉 Your project is live!';
-
-      const linksEl = document.getElementById('result-links');
-      linksEl.innerHTML = '';
-
-      if (result.url) {
-        linksEl.innerHTML += `
-          <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener">
-            <div>
-              <div class="link-label">🌐 Live URL</div>
-              <div class="link-url">${escHtml(result.url)}</div>
-            </div>
-          </a>`;
-      }
-
-      if (result.repoUrl && result.repoUrl !== result.url) {
-        linksEl.innerHTML += `
-          <a class="result-link" href="${escHtml(result.repoUrl)}" target="_blank" rel="noopener">
-            <div>
-              <div class="link-label">💻 GitHub Repository</div>
-              <div class="link-url">${escHtml(result.repoUrl)}</div>
-            </div>
-          </a>`;
-      }
-
-      if (!result.url && !result.repoUrl) {
-        linksEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem">Configure GITHUB_TOKEN and VERCEL_TOKEN to see live links.</p>';
-      }
-
-      const statsEl = document.getElementById('stats-row');
-      statsEl.innerHTML = '';
-      if (result.projectName) {
-        statsEl.innerHTML += `<div class="stat"><div class="stat-label">Project</div><div class="stat-value">${escHtml(result.projectName)}</div></div>`;
-      }
-      if (result.filesCreated) {
-        statsEl.innerHTML += `<div class="stat"><div class="stat-label">Files</div><div class="stat-value">${result.filesCreated}</div></div>`;
-      }
-
-      if (result.projectId) {
-        document.getElementById('domain-section').style.display = 'block';
-      }
-    }
-
-    function showError(msg) {
-      document.getElementById('status-section').style.display = 'block';
-      const card = document.getElementById('result-card');
-      card.className  = 'error';
-      card.style.display = 'block';
-      document.getElementById('result-title').className   = 'error-title';
-      document.getElementById('result-title').textContent = '✗ Build failed';
-      document.getElementById('result-links').innerHTML   = `<p style="color:var(--red)">${escHtml(msg)}</p>`;
-    }
-
-    function resetForm() {
-      document.getElementById('tab-bar').style.display         = 'flex';
-      document.getElementById('input-card').style.display      = 'block';
-      document.getElementById('status-section').style.display  = 'none';
-      document.getElementById('result-card').style.display     = 'none';
-      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-      stopAnimation();
-      // Reset file selection
-      selectedFile = null;
-      const sel = document.getElementById('drop-selected');
-      sel.style.display = 'none';
-      document.querySelector('.drop-icon').textContent = '📦';
-      document.getElementById('zip-file').value = '';
-    }
-
-    // ── Domain connection ─────────────────────────────────────────────────
-    async function connectDomain() {
-      const domainInput = document.getElementById('domain-input');
-      const domain = domainInput.value.trim();
-      if (!domain) { domainInput.focus(); return; }
-
-      const btn = document.getElementById('domain-btn');
-      btn.disabled = true;
-      btn.textContent = 'Connecting...';
-
-      document.getElementById('dns-panel').style.display = 'none';
-      document.getElementById('check-row').style.display = 'none';
-      document.getElementById('check-result').textContent = '';
-
-      try {
-        const res  = await fetch(`${API}/domain`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ domain }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          alert(data.error || 'Failed to connect domain');
-          return;
-        }
-
-        activeDomain = data.domain;
-        renderDnsRecords(data);
-
-      } catch (e) {
-        alert('Error: ' + e.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Connect Domain →';
-      }
-    }
-
-    function renderDnsRecords(data) {
-      const panel    = document.getElementById('dns-panel');
-      const list     = document.getElementById('dns-records-list');
-      const status   = document.getElementById('dns-status');
-      const instr    = document.getElementById('dns-instructions');
-      const checkRow = document.getElementById('check-row');
-
-      panel.style.display    = 'block';
-      checkRow.style.display = 'flex';
-
-      status.textContent = data.verified ? 'Connected ✓' : 'Pending';
-      status.className   = `dns-status ${data.verified ? 'verified' : 'pending'}`;
-
-      list.innerHTML = '';
-      (data.records || []).forEach(r => {
-        const typeClass = r.type === 'CNAME' ? 'CNAME' : r.type === 'A' ? 'A' : 'TXT';
-        const row = document.createElement('div');
-        row.className = 'dns-record';
-        row.innerHTML = `
-          <span class="dns-type ${typeClass}">${escHtml(r.type)}</span>
-          <span class="dns-name">${escHtml(r.name)}</span>
-          <div class="dns-value-wrap">
-            <span class="dns-value">${escHtml(r.value)}</span>
-            <button class="copy-btn" onclick="copyVal(this, '${escHtml(r.value)}')">Copy</button>
-          </div>`;
-        list.appendChild(row);
-      });
-
-      const isApex = !data.domain.includes('.') || data.domain.split('.').length === 2;
-      instr.innerHTML = `
-        <strong>How to add these records:</strong><br>
-        Go to your domain registrar's DNS settings (e.g. Namecheap, Cloudflare, GoDaddy) and add the record(s) above for <code style="color:var(--gold)">${escHtml(data.domain)}</code>.
-        ${isApex ? 'Use the <strong>@</strong> symbol or leave the Name field blank for the apex domain.' : ''}
-        DNS changes typically propagate within 5–30 minutes, but can take up to 48 hours.`;
-
-      if (data.verified) {
-        const checkResult = document.getElementById('check-result');
-        checkResult.textContent = '✓ Domain is connected and verified!';
-        checkResult.className   = 'check-result connected';
-      }
-    }
-
-    async function checkDomainConnection() {
-      if (!activeDomain) return;
-
-      const btn    = document.getElementById('check-btn');
-      const result = document.getElementById('check-result');
-      btn.disabled     = true;
-      btn.textContent  = 'Checking...';
-      result.textContent = '';
-
-      try {
-        const res  = await fetch(`${API}/domain/check?domain=${encodeURIComponent(activeDomain)}`);
-        const data = await res.json();
-
-        if (!res.ok) {
-          result.textContent = `Error: ${data.error}`;
-          result.className   = 'check-result error';
-          return;
-        }
-
-        const status = document.getElementById('dns-status');
-
-        if (data.verified) {
-          result.textContent = '✓ Domain is connected and verified!';
-          result.className   = 'check-result connected';
-          status.textContent = 'Connected ✓';
-          status.className   = 'dns-status verified';
-        } else {
-          result.textContent = '⏳ Not yet connected — DNS may still be propagating (can take up to 48h)';
-          result.className   = 'check-result pending';
-          status.textContent = 'Pending';
-          status.className   = 'dns-status pending';
+          clearInterval(pollTimer); pollTimer = null;
+          stopAnimation();
+          const last = (data.logs || []).filter(l => l.type === 'error').pop();
+          showError(last ? last.msg : 'Build failed');
         }
       } catch (e) {
-        result.textContent = `Error: ${e.message}`;
-        result.className   = 'check-result error';
-      } finally {
-        btn.disabled    = false;
-        btn.textContent = 'Check Connection';
+        console.warn('Poll error:', e);
       }
+    }, 1500);
+  }
+
+  function appendLogs(logs) {
+    const panel = document.getElementById('log-panel');
+    for (let i = lastLogCount; i < logs.length; i++) {
+      const entry = logs[i];
+      const msg   = entry.msg || '';
+      const t     = new Date(entry.ts).toLocaleTimeString();
+      const div   = document.createElement('div');
+      div.className = 'log-entry';
+      let icon = '';
+      if (msg.includes('Stage 1') || msg.includes('Analyzing'))  icon = '🔍 ';
+      else if (msg.includes('CSS') || msg.includes('GPT'))       icon = '🎨 ';
+      else if (msg.includes('logo') || msg.includes('Recraft'))  icon = '🖼 ';
+      else if (msg.includes('image') || msg.includes('FLUX'))    icon = '📸 ';
+      else if (msg.includes('Stage 3') || msg.includes('Claude:') || msg.includes('code')) icon = '🧠 ';
+      else if (msg.includes('Assembl'))                          icon = '🔧 ';
+      else if (msg.includes('GitHub') || msg.includes('Vercel') || msg.includes('Deploy')) icon = '🚀 ';
+      else if (msg.includes('live') || msg.includes('complete') || msg.includes('done'))   icon = '✅ ';
+      div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${icon}${escHtml(msg)}</span>`;
+      panel.appendChild(div);
+    }
+    panel.scrollTop = panel.scrollHeight;
+    lastLogCount = logs.length;
+  }
+
+  function updatePhase(status, logs) {
+    const last  = logs.length ? logs[logs.length - 1].msg : '';
+    const phase = document.getElementById('phase-text');
+    const bar   = document.getElementById('progress-bar');
+    const dot   = document.getElementById('status-dot');
+    if (status === 'building') {
+      phase.textContent = last || 'Working…';
+      bar.className = 'progress-bar indeterminate';
+      dot.classList.add('active');
+    } else if (status === 'done') {
+      phase.textContent = '✓ Build complete!';
+      bar.className = 'progress-bar';
+      bar.style.width = '100%'; bar.style.background = 'var(--green)';
+      dot.classList.remove('active'); dot.style.background = 'var(--green)';
+    } else if (status === 'error') {
+      phase.textContent = '✗ Build failed';
+      bar.className = 'progress-bar';
+      bar.style.width = '100%'; bar.style.background = 'var(--red)';
+      dot.classList.remove('active'); dot.style.background = 'var(--red)';
+    }
+  }
+
+  function showResult(result) {
+    const card = document.getElementById('result-card');
+    card.style.display = 'block';
+    const title = document.getElementById('result-title');
+    title.className   = 'result-title success';
+    title.textContent = '🎉 Your project is live!';
+
+    const linksEl = document.getElementById('result-links');
+    linksEl.innerHTML = '';
+
+    if (result.url) {
+      linksEl.innerHTML += `
+        <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener">
+          <div>
+            <div class="link-label">🌐 Live URL</div>
+            <div class="link-url">${escHtml(result.url)}</div>
+          </div>
+          <span style="color:var(--gold);font-size:1.1rem">↗</span>
+        </a>`;
     }
 
-    function copyVal(btn, value) {
-      navigator.clipboard.writeText(value).then(() => {
-        btn.textContent = 'Copied!';
-        btn.classList.add('copied');
-        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
-      });
+    if (result.repoUrl && result.repoUrl !== result.url) {
+      linksEl.innerHTML += `
+        <a class="result-link" href="${escHtml(result.repoUrl)}" target="_blank" rel="noopener">
+          <div>
+            <div class="link-label">💻 GitHub Repo</div>
+            <div class="link-url">${escHtml(result.repoUrl)}</div>
+          </div>
+          <span style="color:var(--gold);font-size:1.1rem">↗</span>
+        </a>`;
     }
 
-    function escHtml(s) {
-      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    if (!result.url && !result.repoUrl) {
+      linksEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem">Add GITHUB_TOKEN and VERCEL_TOKEN to see live links.</p>';
     }
 
-    document.getElementById('idea').addEventListener('keydown', e => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) startBuild();
+    const statsEl = document.getElementById('stats-row');
+    statsEl.innerHTML = '';
+    if (result.projectName) {
+      statsEl.innerHTML += `<div class="stat"><div class="stat-label">Project</div><div class="stat-value">${escHtml(result.projectName)}</div></div>`;
+    }
+    if (result.filesCreated) {
+      statsEl.innerHTML += `<div class="stat"><div class="stat-label">Files</div><div class="stat-value">${result.filesCreated}</div></div>`;
+    }
+
+    if (result.projectId) {
+      document.getElementById('domain-section').style.display = 'block';
+    }
+  }
+
+  function showError(msg) {
+    document.getElementById('status-section').style.display = 'block';
+    const card = document.getElementById('result-card');
+    card.style.display = 'block';
+    const title = document.getElementById('result-title');
+    title.className   = 'result-title error';
+    title.textContent = '✗ Build failed';
+    document.getElementById('result-links').innerHTML = `<p style="color:var(--red);font-size:0.9rem">${escHtml(msg)}</p>`;
+  }
+
+  function resetForm() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    stopAnimation();
+    document.getElementById('input-card').style.display     = 'block';
+    document.getElementById('status-section').style.display = 'none';
+    document.getElementById('result-card').style.display    = 'none';
+    document.getElementById('build-btn').disabled   = false;
+    document.getElementById('import-btn').disabled  = false;
+    selectedFile = null;
+    const sel = document.getElementById('drop-selected');
+    if (sel) { sel.style.display = 'none'; }
+    const icon = document.querySelector('.drop-icon');
+    if (icon) icon.textContent = '📦';
+    const zipFile = document.getElementById('zip-file');
+    if (zipFile) zipFile.value = '';
+    switchTab(activeTab);
+  }
+
+  // ── Domain ──────────────────────────────────────────────────────────────
+  async function connectDomain() {
+    const domainInput = document.getElementById('domain-input');
+    const domain = domainInput.value.trim();
+    if (!domain) { domainInput.focus(); return; }
+    const btn = document.getElementById('domain-btn');
+    btn.disabled = true; btn.textContent = 'Connecting…';
+    document.getElementById('dns-panel').style.display = 'none';
+    document.getElementById('check-row').style.display = 'none';
+    document.getElementById('check-result').textContent = '';
+    try {
+      const res  = await fetch(`${API}/domain`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain }) });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Failed to connect domain'); return; }
+      activeDomain = data.domain;
+      renderDnsRecords(data);
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Connect →';
+    }
+  }
+
+  function renderDnsRecords(data) {
+    const panel    = document.getElementById('dns-panel');
+    const list     = document.getElementById('dns-records-list');
+    const status   = document.getElementById('dns-status');
+    const instr    = document.getElementById('dns-instructions');
+    const checkRow = document.getElementById('check-row');
+    panel.style.display    = 'block';
+    checkRow.style.display = 'flex';
+    status.textContent = data.verified ? 'Connected ✓' : 'Pending';
+    status.className   = `dns-status ${data.verified ? 'verified' : 'pending'}`;
+    list.innerHTML = '';
+    (data.records || []).forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'dns-record';
+      row.innerHTML = `<span class="dns-type">${escHtml(r.type)}</span><span>${escHtml(r.name)}</span><span class="dns-value">${escHtml(r.value)}</span><button class="copy-btn" onclick="copyVal(this,'${escHtml(r.value)}')">Copy</button>`;
+      list.appendChild(row);
     });
-  </script>
+    instr.innerHTML = `<strong>How to add:</strong> Go to your registrar's DNS settings and add the record(s) above for <code style="color:var(--gold)">${escHtml(data.domain)}</code>. DNS changes propagate within 5–30 minutes.`;
+    if (data.verified) {
+      document.getElementById('check-result').textContent = '✓ Domain is connected!';
+      document.getElementById('check-result').className   = 'check-result connected';
+    }
+  }
+
+  async function checkDomainConnection() {
+    if (!activeDomain) return;
+    const btn    = document.getElementById('check-btn');
+    const result = document.getElementById('check-result');
+    btn.disabled = true; btn.textContent = 'Checking…'; result.textContent = '';
+    try {
+      const res  = await fetch(`${API}/domain/check?domain=${encodeURIComponent(activeDomain)}`);
+      const data = await res.json();
+      if (!res.ok) { result.textContent = `Error: ${data.error}`; result.className = 'check-result error'; return; }
+      if (data.verified) {
+        result.textContent = '✓ Connected!'; result.className = 'check-result connected';
+        document.getElementById('dns-status').textContent = 'Connected ✓';
+        document.getElementById('dns-status').className   = 'dns-status verified';
+      } else {
+        result.textContent = '⏳ Not yet — DNS may still be propagating (up to 48h)'; result.className = 'check-result pending';
+      }
+    } catch (e) {
+      result.textContent = `Error: ${e.message}`; result.className = 'check-result error';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Check Connection';
+    }
+  }
+
+  function copyVal(btn, value) {
+    navigator.clipboard.writeText(value).then(() => {
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    });
+  }
+
+  function escHtml(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.getElementById('idea').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) startBuild();
+  });
+</script>
 </body>
 </html>
