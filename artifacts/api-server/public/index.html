@@ -1084,7 +1084,14 @@
         const t = new Date(entry.ts).toLocaleTimeString('en-US', { hour12: false });
         const div = document.createElement('div');
         div.className = 'log-entry';
-        div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${escHtml(entry.msg)}</span>`;
+        const msg = entry.msg;
+        let icon = '';
+        if (msg.startsWith('GPT-4o:') || msg.includes('GPT-4o CSS')) icon = '🤖 ';
+        else if (msg.startsWith('FLUX:') || msg.includes('FLUX image') || msg.includes('hero image')) icon = '🖼️ ';
+        else if (msg.startsWith('Recraft:') || msg.includes('Recraft logo') || msg.includes('SVG logo')) icon = '🎨 ';
+        else if (msg.includes('parallel design pipeline') || msg.includes('Design pipeline')) icon = '⚡ ';
+        else if (msg.startsWith('Claude:') || msg.includes('assembling')) icon = '🧠 ';
+        div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${icon}${escHtml(msg)}</span>`;
         panel.appendChild(div);
       }
       panel.scrollTop = panel.scrollHeight;

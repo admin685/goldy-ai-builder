@@ -4,6 +4,207 @@ import { createHash } from "crypto";
 
 const router: IRouter = Router();
 
+// ── Multi-AI Design Pipeline ───────────────────────────────────────────────
+
+interface DesignAssets {
+  css: string;
+  heroImageUrl: string;
+  logoSvg: string;
+}
+
+async function generateCSSWithGPT(idea: string, projectName: string): Promise<string> {
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) {
+    log("OPENAI_API_KEY not set — skipping GPT-4o CSS generation", "warn");
+    return "";
+  }
+
+  log("GPT-4o: generating premium CSS styling...", "info");
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "gpt-4o",
+      max_tokens: 3000,
+      messages: [
+        {
+          role: "system",
+          content: `You are a world-class CSS designer. Generate premium, production-ready CSS for a web project. 
+Output ONLY raw CSS — no markdown, no explanation, no backticks. 
+Use CSS custom properties (variables). Create a cohesive design system with:
+- A distinctive color palette (dark theme, rich accent colors matching the project's purpose)
+- Custom Google Font pairings using @import
+- Smooth transitions and hover effects
+- Clean card/container styles
+- A .hero section with a large background image via var(--hero-bg)
+- A .navbar with logo area
+- Responsive layout utilities
+- Subtle animations with @keyframes`,
+        },
+        {
+          role: "user",
+          content: `Project: "${projectName}"\nDescription: ${idea}\n\nGenerate premium CSS for this project.`,
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    log(`GPT-4o CSS generation failed: ${err.slice(0, 200)}`, "warn");
+    return "";
+  }
+
+  const data = (await res.json()) as {
+    choices: Array<{ message: { content: string } }>;
+  };
+  const css = data.choices[0]?.message?.content?.trim() ?? "";
+  log("GPT-4o: CSS generated successfully ✓", "success");
+  return css;
+}
+
+async function generateHeroImageWithFLUX(idea: string): Promise<string> {
+  const token = process.env["REPLICATE_API_TOKEN"];
+  if (!token) {
+    log("REPLICATE_API_TOKEN not set — skipping FLUX image generation", "warn");
+    return "";
+  }
+
+  log("FLUX: generating hero image...", "info");
+
+  const prompt = `Professional hero image for a web app: ${idea}. Cinematic lighting, modern UI aesthetic, dark atmospheric background, photorealistic, 4k quality, no text, no UI elements.`;
+
+  const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Prefer: "wait=30",
+    },
+    body: JSON.stringify({
+      input: {
+        prompt,
+        num_outputs: 1,
+        aspect_ratio: "16:9",
+        output_format: "webp",
+        output_quality: 80,
+      },
+    }),
+  });
+
+  if (!createRes.ok) {
+    const err = await createRes.text();
+    log(`FLUX image generation failed: ${err.slice(0, 200)}`, "warn");
+    return "";
+  }
+
+  const prediction = (await createRes.json()) as {
+    id: string;
+    status: string;
+    output?: string[];
+    urls?: { get: string };
+  };
+
+  // If not completed yet, poll for result
+  if (prediction.status !== "succeeded" && prediction.urls?.get) {
+    for (let i = 0; i < 20; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const pollRes = await fetch(prediction.urls.get, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const polled = (await pollRes.json()) as {
+        status: string;
+        output?: string[];
+      };
+      if (polled.status === "succeeded" && polled.output?.[0]) {
+        log("FLUX: hero image generated successfully ✓", "success");
+        return polled.output[0];
+      }
+      if (polled.status === "failed") {
+        log("FLUX: image generation failed", "warn");
+        return "";
+      }
+    }
+    log("FLUX: image generation timed out", "warn");
+    return "";
+  }
+
+  const imageUrl = prediction.output?.[0] ?? "";
+  if (imageUrl) log("FLUX: hero image generated successfully ✓", "success");
+  return imageUrl;
+}
+
+async function generateLogoWithRecraft(projectName: string, idea: string): Promise<string> {
+  const apiKey = process.env["RECRAFT_API_KEY"];
+  if (!apiKey) {
+    log("RECRAFT_API_KEY not set — skipping Recraft logo generation", "warn");
+    return "";
+  }
+
+  log("Recraft: generating SVG logo...", "info");
+
+  const prompt = `Minimalist modern SVG logo for "${projectName}": ${idea.slice(0, 100)}. Clean geometric design, single color, professional brand mark.`;
+
+  const res = await fetch("https://external.api.recraft.ai/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      prompt,
+      style: "vector_illustration",
+      response_format: "url",
+      n: 1,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    log(`Recraft logo generation failed: ${err.slice(0, 200)}`, "warn");
+    return "";
+  }
+
+  const data = (await res.json()) as {
+    data?: Array<{ url?: string; b64_json?: string }>;
+  };
+
+  const imageUrl = data.data?.[0]?.url ?? "";
+  if (imageUrl) {
+    log("Recraft: logo generated successfully ✓", "success");
+    return imageUrl;
+  }
+
+  log("Recraft: no image URL returned", "warn");
+  return "";
+}
+
+export async function runDesignPipeline(idea: string, projectName: string): Promise<DesignAssets> {
+  log("Launching parallel design pipeline (GPT-4o + FLUX + Recraft)...", "info");
+
+  const [css, heroImageUrl, logoSvg] = await Promise.all([
+    generateCSSWithGPT(idea, projectName).catch((e) => {
+      log(`GPT-4o CSS error: ${(e as Error).message}`, "warn");
+      return "";
+    }),
+    generateHeroImageWithFLUX(idea).catch((e) => {
+      log(`FLUX image error: ${(e as Error).message}`, "warn");
+      return "";
+    }),
+    generateLogoWithRecraft(projectName, idea).catch((e) => {
+      log(`Recraft logo error: ${(e as Error).message}`, "warn");
+      return "";
+    }),
+  ]);
+
+  log("Design pipeline complete — handing assets to Claude for assembly...", "success");
+  return { css, heroImageUrl, logoSvg };
+}
+
 export interface BuildLog {
   ts: number;
   msg: string;
@@ -45,13 +246,35 @@ export function resetState(idea: string) {
   log("Build started — Goldy is thinking...", "info");
 }
 
-// ── Task 2: Updated Claude prompt for static HTML output ──────────────────
+// ── Claude: code generation + design asset assembly ───────────────────────
 
-async function callClaude(idea: string): Promise<Record<string, unknown>> {
+async function callClaude(
+  idea: string,
+  assets?: DesignAssets
+): Promise<Record<string, unknown>> {
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
   const client = new Anthropic({ apiKey });
+
+  const hasAssets = assets && (assets.css || assets.heroImageUrl || assets.logoSvg);
+
+  const assetInstructions = hasAssets
+    ? `
+DESIGN ASSETS — you have been given pre-generated design assets. You MUST integrate them exactly as described:
+
+${assets.css ? `1. GPT-4o PREMIUM CSS — Insert this verbatim inside a <style> tag in the <head>. Do NOT alter or override it. Build your HTML to use the class names defined in it (.hero, .navbar, etc.):
+\`\`\`css
+${assets.css.slice(0, 6000)}
+\`\`\`
+` : ""}
+${assets.heroImageUrl ? `2. FLUX HERO IMAGE — Use this URL as the hero section's background image. Set it inline: style="background-image: url('${assets.heroImageUrl}')" on the .hero element. Also set background-size: cover; background-position: center;
+` : ""}
+${assets.logoSvg ? `3. RECRAFT LOGO — Place this logo image in the navbar using: <img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;"> inside the .navbar element.
+` : ""}
+IMPORTANT: Do NOT generate default/generic CSS for the hero or navbar — the GPT-4o CSS already handles that. Just wire up the HTML structure to use those classes.
+`
+    : "";
 
   const systemPrompt = `You are a senior full-stack developer. The user gives you a project idea. You return a complete, deployable project as JSON.
 
@@ -69,7 +292,7 @@ For webapp and landing projects specifically:
 - Use vanilla JS only — no React, no frameworks, no CDN imports.
 - Store data in localStorage where appropriate.
 - The app must work by opening index.html in a browser with no server.
-
+${assetInstructions}
 Output format — return ONLY valid JSON, no markdown fences, no explanation:
 {
   "project_name": "kebab-case-name",
@@ -83,11 +306,11 @@ Output format — return ONLY valid JSON, no markdown fences, no explanation:
   }
 }`;
 
-  log("Calling Claude to generate your project code...", "info");
+  log("Claude: assembling final project with all design assets...", "info");
 
   const response = await client.messages.create({
     model: "claude-opus-4-5",
-    max_tokens: 12000,
+    max_tokens: 14000,
     system: systemPrompt,
     messages: [{ role: "user", content: idea }],
   });
@@ -333,13 +556,34 @@ export async function deployToVercel(
 
 async function runBuild(idea: string) {
   try {
-    const spec = await callClaude(idea);
-    const projectName = (spec["project_name"] as string) || "my-project";
-    const description = (spec["description"] as string) || "Built by Goldy AI";
+    // Step 1: Quick spec call to get project_name for the design pipeline
+    log("Getting project details from Claude...", "info");
+    const anthropic = new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"] ?? "" });
+    const quickRes = await anthropic.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 300,
+      system: "Return ONLY a JSON object with two fields: project_name (kebab-case) and description (one sentence). No markdown, no explanation.",
+      messages: [{ role: "user", content: idea }],
+    });
+    const quickText = quickRes.content[0].type === "text" ? quickRes.content[0].text : "{}";
+    const quickJson = JSON.parse(quickText.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
+      project_name?: string;
+      description?: string;
+    };
+    const earlyName = quickJson.project_name ?? idea.toLowerCase().replace(/\s+/g, "-").slice(0, 30);
+    const earlyDesc = quickJson.description ?? "Built by Goldy AI";
+    log(`Project: "${earlyName}"`, "success");
+
+    // Step 2: Run design pipeline in parallel (GPT-4o CSS + FLUX image + Recraft logo)
+    const assets = await runDesignPipeline(idea, earlyName);
+
+    // Step 3: Claude assembles full code with all design assets injected
+    const spec = await callClaude(idea, assets);
+    const projectName = (spec["project_name"] as string) || earlyName;
+    const description = (spec["description"] as string) || earlyDesc;
     const files = (spec["files"] as Record<string, string>) || {};
     const features = (spec["features"] as string[]) || [];
 
-    log(`Project: "${projectName}"`, "success");
     log(`${description}`, "info");
     log(`Features: ${features.slice(0, 3).join(" · ")}`, "info");
 

@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
 import AdmZip from "adm-zip";
-import { state, log, resetState, createGitHubRepo, pushFilesToGitHub, deployToVercel } from "./build.js";
+import { state, log, resetState, createGitHubRepo, pushFilesToGitHub, deployToVercel, runDesignPipeline } from "./build.js";
 
 const router: IRouter = Router();
 
@@ -132,12 +132,30 @@ async function fetchReplitZip(url: string): Promise<Buffer> {
 
 async function callClaudeImport(
   files: Record<string, string>,
-  projectHint: string
+  projectHint: string,
+  assets?: { css: string; heroImageUrl: string; logoSvg: string }
 ): Promise<Record<string, unknown>> {
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
   const client = new Anthropic({ apiKey });
+
+  const hasAssets = assets && (assets.css || assets.heroImageUrl || assets.logoSvg);
+
+  const assetInstructions = hasAssets
+    ? `
+DESIGN ASSETS — integrate these pre-generated assets into the rebuilt HTML:
+${assets.css ? `1. GPT-4o PREMIUM CSS — Insert verbatim inside a <style> tag in <head>. Use the class names it defines (.hero, .navbar, etc.):
+\`\`\`css
+${assets.css.slice(0, 6000)}
+\`\`\`
+` : ""}
+${assets.heroImageUrl ? `2. FLUX HERO IMAGE — Set as hero background: style="background-image: url('${assets.heroImageUrl}'); background-size: cover; background-position: center;"
+` : ""}
+${assets.logoSvg ? `3. RECRAFT LOGO — Place in navbar: <img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">
+` : ""}
+`
+    : "";
 
   const systemPrompt = `You are a senior front-end developer. You are given source files from an existing project. Your job is to:
 1. Carefully analyze what the project does, its features, UI design, and functionality
@@ -152,7 +170,7 @@ CRITICAL RULES:
 - Make the UI beautiful and faithful to the original design intent.
 - The app must work by opening index.html in a browser with no server.
 - Generate REAL, working code — not pseudocode or placeholders.
-
+${assetInstructions}
 Output format — return ONLY valid JSON, no markdown fences, no explanation:
 {
   "project_name": "kebab-case-name",
@@ -204,7 +222,11 @@ async function runImport(
   projectHint: string
 ) {
   try {
-    const spec = await callClaudeImport(files, projectHint);
+    // Run design pipeline first based on project hint / source files summary
+    const designIdea = `${projectHint}: ${Object.keys(files).slice(0, 5).join(", ")}`;
+    const assets = await runDesignPipeline(designIdea, projectHint.toLowerCase().replace(/\s+/g, "-").slice(0, 30));
+
+    const spec = await callClaudeImport(files, projectHint, assets);
     const projectName = (spec["project_name"] as string) || "imported-project";
     const description = (spec["description"] as string) || "Imported and rebuilt by Goldy AI";
     const outFiles = (spec["files"] as Record<string, string>) || {};
