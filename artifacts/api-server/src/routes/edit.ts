@@ -127,28 +127,15 @@ ${contextSnippets}`,
     }
 
     elog(s, `✓ Goldy updated ${filesToEdit.length} file${filesToEdit.length !== 1 ? "s" : ""}`, "success");
-
-    // Deploy to a TEMPORARY -preview Vercel project (no GitHub push, no DB write)
-    let previewUrl = "";
-    if (process.env["VERCEL_TOKEN"]) {
-      try {
-        const previewProjectName = `${project.name}-preview`;
-        elog(s, `▶ Vasya is spinning up a preview at ${previewProjectName}...`, "info");
-        const vercelResult = await deployToVercel(previewProjectName, updatedFiles);
-        previewUrl = vercelResult.customUrl ?? vercelResult.url;
-        elog(s, `✓ Preview ready at ${previewUrl}`, "success");
-      } catch (e) {
-        elog(s, `Vasya couldn't deploy preview: ${(e as Error).message}`, "warn");
-      }
-    }
-
+    elog(s, "✓ Preview ready — check the panel on the right.", "success");
     elog(s, "⏳ Waiting for your approval before going live...", "info");
 
     // Store pending changes — do NOT write to DB or GitHub yet
+    // The iframe loads /api/preview/:id?pending=1 which serves these files
     s.pendingFiles = updatedFiles;
     s.pendingProject = project;
     s.status = "preview";
-    s.result = { previewUrl: previewUrl || undefined };
+    s.result = {};
   } catch (err) {
     s.status = "error";
     s.error = (err as Error).message;
