@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goldy Builds — AI Project Builder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold: #f5c518;
+      --gold-light: #ffd700;
+      --gold-dark: #c9a800;
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --green: #3fb950;
+      --red: #f85149;
+      --blue: #58a6ff;
+      --orange: #f0883e;
+      --purple: #bc8cff;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px 80px;
+      min-height: 100%;
+    }
+
+    /* ── Header ── */
+    .header { text-align: center; margin-bottom: 40px; }
+
+    .logo {
+      font-size: 2.6rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+
+    .logo-icon {
+      display: inline-block;
+      -webkit-text-fill-color: initial;
+      background: none;
+      margin-right: 8px;
+    }
+
+    .subtitle { color: var(--text-muted); font-size: 1.05rem; }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 760px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+
+    /* ── Textarea ── */
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 1rem;
+      font-family: inherit;
+      padding: 14px 16px;
+      resize: vertical;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    textarea:focus { border-color: var(--gold); }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* ── Buttons ── */
+    .btn-build {
+      width: 100%;
+      margin-top: 14px;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #000;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      letter-spacing: 0.3px;
+    }
+
+    .btn-build:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+    .btn-build:active:not(:disabled) { transform: translateY(0); }
+    .btn-build:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-secondary {
+      padding: 10px 18px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-secondary:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+    .btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-domain {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #000;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-domain:hover:not(:disabled) { opacity: 0.85; }
+    .btn-domain:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Example chips ── */
+    .examples { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .example-chip {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .example-chip:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Status section ── */
+    #status-section { display: none; }
+
+    /* ── Canvas ── */
+    .canvas-wrap {
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      background: #0a0e14;
+    }
+
+    canvas { display: block; width: 100%; height: 180px; }
+
+    /* ── Phase label ── */
+    .phase-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: pulse 1.2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      height: 4px;
+      background: var(--bg3);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+      border-radius: 2px;
+      transition: width 0.6s ease;
+      width: 0%;
+    }
+
+    .progress-bar.indeterminate {
+      width: 40% !important;
+      animation: slide 1.4s ease-in-out infinite;
+    }
+
+    @keyframes slide {
+      0%   { transform: translateX(-150%); }
+      100% { transform: translateX(350%); }
+    }
+
+    /* ── Log panel ── */
+    .log-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      max-height: 260px;
+      overflow-y: auto;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.83rem;
+    }
+
+    .log-panel::-webkit-scrollbar { width: 6px; }
+    .log-panel::-webkit-scrollbar-track { background: transparent; }
+    .log-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .log-entry { display: flex; gap: 12px; margin-bottom: 5px; align-items: flex-start; }
+    .log-time { color: var(--text-muted); flex-shrink: 0; }
+    .log-msg-info { color: var(--text); }
+    .log-msg-success { color: var(--green); }
+    .log-msg-error { color: var(--red); }
+    .log-msg-warn { color: var(--orange); }
+
+    /* ── Result card ── */
+    #result-card {
+      display: none;
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 20px;
+      border: 1px solid;
+    }
+
+    #result-card.success {
+      background: rgba(63, 185, 80, 0.07);
+      border-color: rgba(63, 185, 80, 0.4);
+    }
+
+    #result-card.error {
+      background: rgba(248, 81, 73, 0.07);
+      border-color: rgba(248, 81, 73, 0.4);
+    }
+
+    #result-card h3 { font-size: 1.15rem; margin-bottom: 14px; }
+    #result-card h3.success-title { color: var(--green); }
+    #result-card h3.error-title { color: var(--red); }
+
+    .result-links { display: flex; flex-direction: column; gap: 10px; }
+
+    .result-link {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: var(--bg2);
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+
+    .result-link:hover { border-color: var(--gold); }
+    .result-link .link-label { color: var(--text-muted); font-size: 0.78rem; }
+    .result-link .link-url { color: var(--blue); word-break: break-all; }
+
+    .stats-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 14px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.82rem;
+    }
+
+    .stat-label { color: var(--text-muted); }
+    .stat-value { color: var(--gold); font-weight: 700; }
+
+    .btn-reset {
+      margin-top: 20px;
+      padding: 10px 22px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-reset:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Task 4: Domain section ── */
+    .domain-section {
+      display: none;
+      margin-top: 28px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .domain-section h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .domain-section p {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+
+    .domain-input-row {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .domain-input {
+      flex: 1;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .domain-input:focus { border-color: var(--gold); }
+    .domain-input::placeholder { color: var(--text-muted); }
+
+    /* DNS records panel */
+    .dns-panel {
+      display: none;
+      margin-top: 18px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .dns-panel-header {
+      padding: 12px 16px;
+      background: var(--bg3);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dns-panel-header span {
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .dns-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
+
+    .dns-status.pending {
+      background: rgba(240, 136, 62, 0.15);
+      color: var(--orange);
+      border: 1px solid rgba(240, 136, 62, 0.3);
+    }
+
+    .dns-status.verified {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--green);
+      border: 1px solid rgba(63, 185, 80, 0.3);
+    }
+
+    .dns-record {
+      display: grid;
+      grid-template-columns: 70px 1fr 1fr;
+      gap: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.83rem;
+      align-items: center;
+    }
+
+    .dns-record:last-child { border-bottom: none; }
+
+    .dns-type {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .dns-type.A { background: rgba(88, 166, 255, 0.15); color: var(--blue); }
+    .dns-type.CNAME { background: rgba(188, 140, 255, 0.15); color: var(--purple); }
+    .dns-type.TXT { background: rgba(240, 136, 62, 0.15); color: var(--orange); }
+
+    .dns-name { color: var(--text-muted); padding: 0 12px; }
+    .dns-value-wrap { display: flex; align-items: center; gap: 8px; }
+
+    .dns-value {
+      color: var(--gold);
+      word-break: break-all;
+      flex: 1;
+    }
+
+    .copy-btn {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-muted);
+      padding: 3px 8px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .copy-btn:hover { border-color: var(--gold); color: var(--gold); }
+    .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+    .dns-instructions {
+      padding: 12px 16px;
+      background: rgba(245, 197, 24, 0.04);
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+    }
+
+    .dns-instructions strong { color: var(--text); }
+
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .check-result {
+      font-size: 0.85rem;
+      flex: 1;
+    }
+
+    .check-result.connected { color: var(--green); }
+    .check-result.pending { color: var(--orange); }
+    .check-result.error { color: var(--red); }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo"><span class="logo-icon">⚒️</span> GOLDY BUILDS</div>
+    <div class="subtitle">Describe your project. We build it.</div>
+  </div>
+
+  <!-- Input card -->
+  <div class="card" id="input-card">
+    <textarea
+      id="idea"
+      placeholder="What do you want to build today?&#10;&#10;Example: A todo app with a dark theme, local storage, and priority tags"
+    ></textarea>
+
+    <button class="btn-build" id="build-btn" onclick="startBuild()">
+      Build It →
+    </button>
+
+    <div class="examples">
+      <span class="example-chip" onclick="fillExample(this)">Todo list web app with dark theme</span>
+      <span class="example-chip" onclick="fillExample(this)">Landing page for a SaaS product</span>
+      <span class="example-chip" onclick="fillExample(this)">Personal portfolio with animations</span>
+      <span class="example-chip" onclick="fillExample(this)">Expense tracker with charts</span>
+      <span class="example-chip" onclick="fillExample(this)">Pomodoro timer app</span>
+    </div>
+  </div>
+
+  <!-- Status card -->
+  <div class="card" id="status-section">
+
+    <div class="canvas-wrap">
+      <canvas id="goldy-canvas" width="760" height="180"></canvas>
+    </div>
+
+    <div class="phase-label">
+      <div class="dot"></div>
+      <span id="phase-text">Initializing...</span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-bar indeterminate" id="progress-bar"></div>
+    </div>
+
+    <div class="log-panel" id="log-panel"></div>
+
+    <!-- Result card -->
+    <div id="result-card">
+      <h3 id="result-title"></h3>
+      <div class="result-links" id="result-links"></div>
+      <div class="stats-row" id="stats-row"></div>
+
+      <!-- Task 4: Domain connection section -->
+      <div class="domain-section" id="domain-section">
+        <h4>Connect a Custom Domain</h4>
+        <p>Enter your domain name to get the DNS records you need to add. Your domain will point to this deployment on Vercel.</p>
+
+        <div class="domain-input-row">
+          <input
+            type="text"
+            class="domain-input"
+            id="domain-input"
+            placeholder="e.g. myapp.com or app.mysite.com"
+            onkeydown="if(event.key==='Enter') connectDomain()"
+          />
+          <button class="btn-domain" id="domain-btn" onclick="connectDomain()">
+            Connect Domain →
+          </button>
+        </div>
+
+        <!-- DNS records panel -->
+        <div class="dns-panel" id="dns-panel">
+          <div class="dns-panel-header">
+            <span>DNS Records to Add</span>
+            <span class="dns-status pending" id="dns-status">Pending</span>
+          </div>
+          <div id="dns-records-list"></div>
+          <div class="dns-instructions" id="dns-instructions"></div>
+        </div>
+
+        <div class="check-row" id="check-row" style="display:none">
+          <button class="btn-secondary" id="check-btn" onclick="checkDomainConnection()">
+            Check Connection
+          </button>
+          <span class="check-result" id="check-result"></span>
+        </div>
+      </div>
+
+      <button class="btn-reset" onclick="resetForm()">Build Another Project</button>
+    </div>
+
+  </div>
+
+  <script>
+    const BASE = window.location.pathname.replace(/\/$/, '');
+    const API  = BASE;
+
+    let pollTimer    = null;
+    let animFrame    = null;
+    let lastLogCount = 0;
+    let particles    = [];
+    let bots         = [];
+    let activeDomain = '';
+
+    // ── Canvas animation ─────────────────────────────────────────────────
+    const canvas = document.getElementById('goldy-canvas');
+    const ctx    = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width  = rect.width * devicePixelRatio;
+      canvas.height = 180   * devicePixelRatio;
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+    }
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < 40; i++) {
+        particles.push({
+          x: Math.random() * 760, y: Math.random() * 180,
+          r: Math.random() * 1.5 + 0.3,
+          vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+          a: Math.random() * 0.6 + 0.2,
+        });
+      }
+    }
+
+    function initBots() {
+      const colors = ['#f5c518','#ffd700','#58a6ff','#3fb950','#f0883e'];
+      bots = [];
+      for (let i = 0; i < 5; i++) {
+        bots.push({
+          x: 60 + i * 130, y: 90,
+          tx: Math.random() * 700 + 30, ty: Math.random() * 120 + 30,
+          color: colors[i], size: 14 + Math.random() * 8,
+          speed: 0.8 + Math.random() * 0.8,
+          angle: 0, angleSpeed: (Math.random() - 0.5) * 0.08, tick: 0,
+        });
+      }
+    }
+
+    function drawBot(b) {
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle);
+      ctx.fillStyle = b.color + '33';
+      ctx.strokeStyle = b.color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-b.size/2, -b.size/2, b.size, b.size, 4);
+      ctx.fill(); ctx.stroke();
+      ctx.fillStyle = b.color;
+      ctx.beginPath();
+      ctx.arc(-b.size*0.2, -b.size*0.1, b.size*0.12, 0, Math.PI*2);
+      ctx.arc( b.size*0.2, -b.size*0.1, b.size*0.12, 0, Math.PI*2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(0, -b.size/2); ctx.lineTo(0, -b.size/2 - 8); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(0, -b.size/2 - 10, 3, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGrid() {
+      const W = canvas.width / devicePixelRatio;
+      const H = canvas.height / devicePixelRatio;
+      ctx.strokeStyle = 'rgba(48,54,61,0.5)';
+      ctx.lineWidth = 0.5;
+      for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+      for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    }
+
+    function animate() {
+      const W = canvas.width / devicePixelRatio;
+      const H = canvas.height / devicePixelRatio;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#0a0e14'; ctx.fillRect(0, 0, W, H);
+      drawGrid();
+      particles.forEach(p => {
+        p.x += p.vx; p.y += p.vy;
+        if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+        if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(245,197,24,${p.a})`; ctx.fill();
+      });
+      bots.forEach(b => {
+        b.tick++;
+        const dx = b.tx - b.x, dy = b.ty - b.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 5) {
+          b.tx = Math.random() * (W - 60) + 30;
+          b.ty = Math.random() * (H - 40) + 20;
+        } else {
+          b.x += (dx / dist) * b.speed;
+          b.y += (dy / dist) * b.speed;
+        }
+        b.angle += b.angleSpeed;
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(b.x - (dx/dist)*20, b.y - (dy/dist)*20);
+        ctx.strokeStyle = b.color + '30'; ctx.lineWidth = 2; ctx.stroke();
+        drawBot(b);
+      });
+      ctx.fillStyle = 'rgba(245,197,24,0.12)';
+      ctx.font = 'bold 72px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚒️', W/2, H/2 + 28);
+      animFrame = requestAnimationFrame(animate);
+    }
+
+    function startAnimation() {
+      resizeCanvas(); initParticles(); initBots();
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(animate);
+    }
+
+    function stopAnimation() {
+      if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    }
+
+    // ── Build flow ────────────────────────────────────────────────────────
+    function fillExample(el) { document.getElementById('idea').value = el.textContent; }
+
+    async function startBuild() {
+      const idea = document.getElementById('idea').value.trim();
+      if (!idea) { alert('Please describe your project first!'); return; }
+
+      document.getElementById('input-card').style.display  = 'none';
+      document.getElementById('status-section').style.display = 'block';
+      document.getElementById('result-card').style.display = 'none';
+      document.getElementById('domain-section').style.display = 'none';
+      document.getElementById('dns-panel').style.display   = 'none';
+      document.getElementById('log-panel').innerHTML       = '';
+      lastLogCount = 0;
+      activeDomain = '';
+
+      startAnimation();
+
+      try {
+        const res  = await fetch(`${API}/build`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idea }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Build request failed');
+        pollTimer = setInterval(pollStatus, 3000);
+        pollStatus();
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    async function pollStatus() {
+      try {
+        const res  = await fetch(`${API}/status`);
+        const data = await res.json();
+        updateLogs(data.logs || []);
+        updatePhase(data.status, data.logs || []);
+        if (data.status === 'done') {
+          clearInterval(pollTimer); stopAnimation(); showResult(data.result);
+        } else if (data.status === 'error') {
+          clearInterval(pollTimer); stopAnimation();
+          showError(data.error || 'An unknown error occurred');
+        }
+      } catch (e) { console.error('Poll error:', e); }
+    }
+
+    function updateLogs(logs) {
+      if (logs.length === lastLogCount) return;
+      const panel = document.getElementById('log-panel');
+      for (let i = lastLogCount; i < logs.length; i++) {
+        const entry = logs[i];
+        const t = new Date(entry.ts).toLocaleTimeString('en-US', { hour12: false });
+        const div = document.createElement('div');
+        div.className = 'log-entry';
+        div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${escHtml(entry.msg)}</span>`;
+        panel.appendChild(div);
+      }
+      panel.scrollTop = panel.scrollHeight;
+      lastLogCount = logs.length;
+    }
+
+    function updatePhase(status, logs) {
+      const last  = logs.length ? logs[logs.length - 1].msg : '';
+      const phase = document.getElementById('phase-text');
+      const bar   = document.getElementById('progress-bar');
+      if (status === 'building') {
+        phase.textContent = last || 'Working...';
+        bar.className = 'progress-bar indeterminate';
+      } else if (status === 'done') {
+        phase.textContent = '✓ Build complete!';
+        bar.className = 'progress-bar';
+        bar.style.width = '100%'; bar.style.background = 'var(--green)';
+      } else if (status === 'error') {
+        phase.textContent = '✗ Build failed';
+        bar.className = 'progress-bar';
+        bar.style.width = '100%'; bar.style.background = 'var(--red)';
+      }
+    }
+
+    function showResult(result) {
+      const card = document.getElementById('result-card');
+      card.className  = 'success';
+      card.style.display = 'block';
+      document.getElementById('result-title').className   = 'success-title';
+      document.getElementById('result-title').textContent = '🎉 Your project is live!';
+
+      const linksEl = document.getElementById('result-links');
+      linksEl.innerHTML = '';
+
+      if (result.url) {
+        linksEl.innerHTML += `
+          <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener">
+            <div>
+              <div class="link-label">🌐 Live URL</div>
+              <div class="link-url">${escHtml(result.url)}</div>
+            </div>
+          </a>`;
+      }
+
+      if (result.repoUrl && result.repoUrl !== result.url) {
+        linksEl.innerHTML += `
+          <a class="result-link" href="${escHtml(result.repoUrl)}" target="_blank" rel="noopener">
+            <div>
+              <div class="link-label">💻 GitHub Repository</div>
+              <div class="link-url">${escHtml(result.repoUrl)}</div>
+            </div>
+          </a>`;
+      }
+
+      if (!result.url && !result.repoUrl) {
+        linksEl.innerHTML = '<p style="color:var(--text-muted);font-size:0.88rem">Configure GITHUB_TOKEN and VERCEL_TOKEN to see live links.</p>';
+      }
+
+      const statsEl = document.getElementById('stats-row');
+      statsEl.innerHTML = '';
+      if (result.projectName) {
+        statsEl.innerHTML += `<div class="stat"><div class="stat-label">Project</div><div class="stat-value">${escHtml(result.projectName)}</div></div>`;
+      }
+      if (result.filesCreated) {
+        statsEl.innerHTML += `<div class="stat"><div class="stat-label">Files</div><div class="stat-value">${result.filesCreated}</div></div>`;
+      }
+
+      if (result.projectId) {
+        document.getElementById('domain-section').style.display = 'block';
+      }
+    }
+
+    function showError(msg) {
+      const card = document.getElementById('result-card');
+      card.className  = 'error';
+      card.style.display = 'block';
+      document.getElementById('result-title').className   = 'error-title';
+      document.getElementById('result-title').textContent = '✗ Build failed';
+      document.getElementById('result-links').innerHTML   = `<p style="color:var(--red)">${escHtml(msg)}</p>`;
+    }
+
+    function resetForm() {
+      document.getElementById('input-card').style.display  = 'block';
+      document.getElementById('status-section').style.display = 'none';
+      document.getElementById('result-card').style.display = 'none';
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+      stopAnimation();
+    }
+
+    // ── Task 4: Domain connection ─────────────────────────────────────────
+    async function connectDomain() {
+      const domainInput = document.getElementById('domain-input');
+      const domain = domainInput.value.trim();
+      if (!domain) { domainInput.focus(); return; }
+
+      const btn = document.getElementById('domain-btn');
+      btn.disabled = true;
+      btn.textContent = 'Connecting...';
+
+      document.getElementById('dns-panel').style.display = 'none';
+      document.getElementById('check-row').style.display = 'none';
+      document.getElementById('check-result').textContent = '';
+
+      try {
+        const res  = await fetch(`${API}/domain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ domain }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          alert(data.error || 'Failed to connect domain');
+          return;
+        }
+
+        activeDomain = data.domain;
+        renderDnsRecords(data);
+
+      } catch (e) {
+        alert('Error: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Connect Domain →';
+      }
+    }
+
+    function renderDnsRecords(data) {
+      const panel    = document.getElementById('dns-panel');
+      const list     = document.getElementById('dns-records-list');
+      const status   = document.getElementById('dns-status');
+      const instr    = document.getElementById('dns-instructions');
+      const checkRow = document.getElementById('check-row');
+
+      panel.style.display    = 'block';
+      checkRow.style.display = 'flex';
+
+      status.textContent = data.verified ? 'Connected ✓' : 'Pending';
+      status.className   = `dns-status ${data.verified ? 'verified' : 'pending'}`;
+
+      list.innerHTML = '';
+      (data.records || []).forEach(r => {
+        const typeClass = r.type === 'CNAME' ? 'CNAME' : r.type === 'A' ? 'A' : 'TXT';
+        const row = document.createElement('div');
+        row.className = 'dns-record';
+        row.innerHTML = `
+          <span class="dns-type ${typeClass}">${escHtml(r.type)}</span>
+          <span class="dns-name">${escHtml(r.name)}</span>
+          <div class="dns-value-wrap">
+            <span class="dns-value">${escHtml(r.value)}</span>
+            <button class="copy-btn" onclick="copyVal(this, '${escHtml(r.value)}')">Copy</button>
+          </div>`;
+        list.appendChild(row);
+      });
+
+      const isApex = !data.domain.includes('.') || data.domain.split('.').length === 2;
+      instr.innerHTML = `
+        <strong>How to add these records:</strong><br>
+        Go to your domain registrar's DNS settings (e.g. Namecheap, Cloudflare, GoDaddy) and add the record(s) above for <code style="color:var(--gold)">${escHtml(data.domain)}</code>.
+        ${isApex ? 'Use the <strong>@</strong> symbol or leave the Name field blank for the apex domain.' : ''}
+        DNS changes typically propagate within 5–30 minutes, but can take up to 48 hours.`;
+
+      if (data.verified) {
+        const checkResult = document.getElementById('check-result');
+        checkResult.textContent = '✓ Domain is connected and verified!';
+        checkResult.className   = 'check-result connected';
+      }
+    }
+
+    async function checkDomainConnection() {
+      if (!activeDomain) return;
+
+      const btn    = document.getElementById('check-btn');
+      const result = document.getElementById('check-result');
+      btn.disabled     = true;
+      btn.textContent  = 'Checking...';
+      result.textContent = '';
+
+      try {
+        const res  = await fetch(`${API}/domain/check?domain=${encodeURIComponent(activeDomain)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          result.textContent = `Error: ${data.error}`;
+          result.className   = 'check-result error';
+          return;
+        }
+
+        const status = document.getElementById('dns-status');
+
+        if (data.verified) {
+          result.textContent = '✓ Domain is connected and verified!';
+          result.className   = 'check-result connected';
+          status.textContent = 'Connected ✓';
+          status.className   = 'dns-status verified';
+        } else {
+          result.textContent = '⏳ Not yet connected — DNS may still be propagating (can take up to 48h)';
+          result.className   = 'check-result pending';
+          status.textContent = 'Pending';
+          status.className   = 'dns-status pending';
+        }
+      } catch (e) {
+        result.textContent = `Error: ${e.message}`;
+        result.className   = 'check-result error';
+      } finally {
+        btn.disabled    = false;
+        btn.textContent = 'Check Connection';
+      }
+    }
+
+    function copyVal(btn, value) {
+      navigator.clipboard.writeText(value).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    function escHtml(s) {
+      return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    document.getElementById('idea').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) startBuild();
+    });
+  </script>
+</body>
+</html>

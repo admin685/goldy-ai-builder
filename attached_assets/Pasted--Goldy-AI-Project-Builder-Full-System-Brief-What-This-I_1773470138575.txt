@@ -1,0 +1,536 @@
+# Goldy AI Project Builder — Full System Brief
+
+## What This Is
+
+An autonomous AI system that takes a plain-language project idea and delivers
+a fully working, deployed web application, Telegram bot, landing page, or API
+— completely automatically, with no human coding required.
+
+**The user types an idea. The system builds and deploys it. Done.**
+
+---
+
+## Tech Stack (all APIs work today, no waitlists)
+
+| Layer | Service | Why |
+|---|---|---|
+| Hosting (hub) | Railway.app | Never sleeps, deploy via git, $5/mo |
+| Orchestration | n8n Cloud | Visual workflow, all APIs connected, free tier |
+| AI brain | Anthropic Claude API | Generates code, answers questions, reviews output |
+| Code execution | e2b.dev | Runs code in cloud sandbox, has full API |
+| Code storage | GitHub API | Stores every project, auto-deploys via Vercel/Railway |
+| Frontend deploy | Vercel API | Deploys Next.js / static sites in seconds |
+| Bot deploy | Telegram Bot API | Creates and runs Telegram bots |
+
+---
+
+## How It Works — Full Flow
+
+```
+1. User types idea into Chat UI
+         ↓
+2. Claude converts idea → structured JSON spec
+   (project type, stack, features, full code)
+         ↓
+3. n8n receives spec via webhook
+         ↓
+4. n8n calls Claude API → generates ALL project files
+         ↓
+5. n8n calls GitHub API → creates new repo, pushes files
+         ↓
+6. n8n calls e2b.dev → runs the code, checks it works
+         ↓
+7. n8n calls Vercel/Railway API → deploys the project
+         ↓
+8. n8n calls hub callback → sends live URL to user
+         ↓
+9. User sees live link in Chat UI
+```
+
+Total time: 3–8 minutes per project.
+
+---
+
+## Component 1 — Chat UI Hub (Railway.app)
+
+### What to build
+
+A Flask web application with a clean chat-style interface.
+This is the only thing the user ever sees.
+
+### Endpoints
+
+```
+GET  /          → serves index.html (the UI)
+POST /build     → receives {idea: "..."}, starts the build
+GET  /status    → returns current build status + log entries
+POST /callback  → receives {url: "...", status: "done"} from n8n
+```
+
+### UI design
+
+Single page. Dark background (`#0d1117`). Centered card layout.
+
+Elements on the page:
+- Logo: "⚒️ GOLDY BUILDS" in large bold font, golden color
+- Subtitle: "Describe your project. We build it."
+- Large textarea: placeholder "What do you want to build today?"
+- Submit button: golden, full width, "Build It →"
+- Status section (hidden until build starts):
+  - Goldy animation panel (the construction canvas from GOLDY_BUILDER_BRIEF.md)
+  - Live log: scrolling list of build events
+  - Final result: green card with "Your project is live!" + clickable URL
+
+### Status polling
+
+After submit, JavaScript polls `GET /status` every 3 seconds.
+When status is "done", shows the URL. When status is "error", shows the error.
+
+### Environment variables (Railway Secrets)
+
+```
+ANTHROPIC_API_KEY=sk-ant-...
+N8N_WEBHOOK_URL=https://your-n8n.app.n8n.cloud/webhook/...
+GITHUB_TOKEN=ghp_...
+SECRET_CALLBACK_TOKEN=random-string-for-security
+```
+
+### File structure
+
+```
+/hub
+  app.py              ← Flask server
+  templates/
+    index.html        ← Full UI with Goldy animation
+  static/
+    goldy.js          ← Canvas animation (from GOLDY_BUILDER_BRIEF.md)
+    style.css         ← Minimal overrides
+  requirements.txt    ← flask, requests, anthropic, python-dotenv
+  Procfile            ← web: gunicorn app:app
+  railway.json        ← { "deploy": { "startCommand": "gunicorn app:app" } }
+```
+
+---
+
+## Component 2 — n8n Cloud Workflow
+
+### Setup
+
+1. Sign up at n8n.cloud (free tier has 5 workflows, plenty)
+2. Create a new workflow called "Goldy Builder"
+3. Set up credentials: Anthropic, GitHub, e2b, Vercel
+
+### Nodes in order
+
+#### Node 1: Webhook Trigger
+- Type: Webhook
+- Method: POST
+- Path: `/goldy-build`
+- This is the `N8N_WEBHOOK_URL` that the hub calls
+
+#### Node 2: Claude — Analyze & Generate Spec
+- Type: HTTP Request → Anthropic API
+- URL: `https://api.anthropic.com/v1/messages`
+- Auth: `x-api-key: {{$env.ANTHROPIC_API_KEY}}`
+- Body:
+```json
+{
+  "model": "claude-sonnet-4-20250514",
+  "max_tokens": 4000,
+  "system": "You are a senior software architect. The user gives you a project idea. You return a JSON object with these fields:\n- project_name: kebab-case name\n- project_type: one of [webapp, landing, telegram_bot, api]\n- tech_stack: e.g. 'Python Flask + SQLite'\n- description: one sentence\n- features: array of 5-8 specific features\n- files: object where keys are file paths and values are complete file contents\n\nThe files must be a COMPLETE, working project. Include every file needed to run it. Return ONLY valid JSON, no markdown.",
+  "messages": [{"role": "user", "content": "{{$json.idea}}"}]
+}
+```
+- Parse response: extract `content[0].text`, JSON.parse it
+
+#### Node 3: GitHub — Create Repository
+- Type: HTTP Request → GitHub API
+- URL: `https://api.github.com/user/repos`
+- Method: POST
+- Auth: `Authorization: token {{$env.GITHUB_TOKEN}}`
+- Body:
+```json
+{
+  "name": "{{$json.project_name}}-{{$now.toFormat('yyyyMMdd-HHmm')}}",
+  "private": false,
+  "description": "{{$json.description}}",
+  "auto_init": true
+}
+```
+
+#### Node 4: GitHub — Push All Files
+- Type: Code (JavaScript)
+- For each file in `spec.files`, call GitHub Contents API:
+```javascript
+const files = $input.item.json.files;
+const repo = $input.item.json.repo_name;
+const token = $env.GITHUB_TOKEN;
+
+for (const [path, content] of Object.entries(files)) {
+  await fetch(`https://api.github.com/repos/your-username/${repo}/contents/${path}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `token ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: `Add ${path}`,
+      content: Buffer.from(content).toString('base64')
+    })
+  });
+}
+return [{json: {repo, files_pushed: Object.keys(files).length}}];
+```
+
+#### Node 5: e2b — Run & Test the Code
+- Type: HTTP Request → e2b API
+- URL: `https://api.e2b.dev/sandboxes`
+- Method: POST
+- Auth: `X-API-Key: {{$env.E2B_API_KEY}}`
+- Body:
+```json
+{
+  "template": "Python" ,
+  "timeout": 120
+}
+```
+- Then upload files and run: `POST /sandboxes/{id}/processes`
+- Command: `pip install -r requirements.txt && python app.py &`
+- Wait 10 seconds, check process is running
+- This validates the code actually works before deploying
+
+#### Node 6: Deploy (branch based on project_type)
+
+**If project_type = "webapp" or "landing":**
+- Call Vercel API to deploy from GitHub repo
+- URL: `https://api.vercel.com/v13/deployments`
+- Auth: `Authorization: Bearer {{$env.VERCEL_TOKEN}}`
+- Body: `{"name": "{{repo}}", "gitSource": {"type": "github", "repoId": "..."}}`
+
+**If project_type = "telegram_bot":**
+- Call Railway API to deploy
+- Or: deploy to e2b as a persistent sandbox
+
+**If project_type = "api":**
+- Call Railway API: `POST https://backboard.railway.app/graphql/v2`
+- Deploy from GitHub repo
+
+#### Node 7: Notify Hub (callback)
+- Type: HTTP Request
+- URL: `{{$env.HUB_URL}}/callback`
+- Method: POST
+- Headers: `X-Callback-Token: {{$env.SECRET_CALLBACK_TOKEN}}`
+- Body:
+```json
+{
+  "status": "done",
+  "url": "{{$json.deploy_url}}",
+  "repo_url": "https://github.com/your-username/{{$json.repo_name}}",
+  "project_name": "{{$json.project_name}}",
+  "files_created": "{{$json.files_pushed}}"
+}
+```
+
+#### Error handling
+- Add error branch on every node
+- On error: call hub callback with `{"status": "error", "message": "..."}`
+
+---
+
+## Component 3 — Claude Prompts
+
+### Prompt 1: Spec + Code Generator
+
+This is the most important prompt. Claude generates the ENTIRE project.
+
+```
+You are a senior full-stack developer and architect. The user gives you a
+software project idea. You return a complete, working project as JSON.
+
+Rules:
+- Generate REAL, working code. Not pseudocode, not placeholders.
+- Every file must be complete and self-contained.
+- Choose the simplest stack that works: Flask for web apps, pure HTML/CSS/JS
+  for landing pages, python-telegram-bot for Telegram bots.
+- Include requirements.txt or package.json.
+- Include a README.md with setup instructions.
+- For web apps: include a beautiful, modern UI (dark theme, clean design).
+  Claude generates all HTML/CSS inline — no external UI libraries needed.
+- For landing pages: make them genuinely beautiful. Use CSS animations,
+  gradients, great typography. Think premium agency work.
+- For Telegram bots: include all handlers, proper error handling, /start /help.
+- For APIs: include OpenAPI docs endpoint at /docs.
+
+Output format — return ONLY this JSON, nothing else:
+{
+  "project_name": "my-project-name",
+  "project_type": "webapp|landing|telegram_bot|api",
+  "tech_stack": "Python Flask + SQLite",
+  "description": "One sentence description",
+  "features": ["Feature 1", "Feature 2", "Feature 3"],
+  "files": {
+    "app.py": "... complete file content ...",
+    "templates/index.html": "... complete file content ...",
+    "requirements.txt": "flask\nrequests\n",
+    "README.md": "... complete file content ..."
+  }
+}
+```
+
+### Prompt 2: Code Reviewer (optional quality gate)
+
+After Claude generates the spec, optionally run a second Claude call:
+
+```
+You are a code reviewer. Review this generated project spec and code.
+
+Project spec:
+{{SPEC_JSON}}
+
+Check:
+1. Will this code actually run without errors?
+2. Are all imports available (check requirements.txt)?
+3. Is there any obvious bug or missing piece?
+4. Is the UI (if any) actually beautiful and complete?
+
+If everything looks good, respond: {"approved": true}
+If there are issues, respond: {"approved": false, "fixes": {"filename": "corrected content"}}
+
+Return ONLY JSON.
+```
+
+If `approved: false`, n8n merges the fixes into the files object and continues.
+
+---
+
+## Component 4 — e2b.dev Integration
+
+e2b runs code in cloud sandboxes. It has a full REST API.
+
+### How to use it
+
+```python
+# Simple example — n8n calls this Python endpoint on the hub
+import e2b
+
+sandbox = e2b.Sandbox(template="Python")
+
+# Upload all project files
+for path, content in project_files.items():
+    sandbox.filesystem.write(path, content)
+
+# Install dependencies
+sandbox.process.start_and_wait("pip install -r requirements.txt")
+
+# Run the app
+proc = sandbox.process.start("python app.py")
+
+# Check it started successfully
+import time
+time.sleep(5)
+if proc.exit_code is None:  # still running = good
+    print("App is running!")
+    sandbox_url = sandbox.get_hostname()
+```
+
+### e2b templates available
+
+- `Python` — Python 3.11, pip
+- `Node` — Node 18, npm
+- `Nextjs` — Next.js ready
+- `Base` — bare Ubuntu
+
+### API key
+
+Get at: https://e2b.dev/dashboard → API Keys
+Store as: `E2B_API_KEY` in Railway Secrets and n8n Credentials
+
+---
+
+## Component 5 — GitHub Integration
+
+Every generated project gets its own GitHub repo.
+
+### What you need
+
+1. Create a GitHub account (or use existing)
+2. Go to Settings → Developer Settings → Personal Access Tokens
+3. Generate token with scopes: `repo`, `delete_repo`
+4. Store as `GITHUB_TOKEN`
+
+### How repos are named
+
+```
+goldy-{project_name}-{timestamp}
+e.g. goldy-barbershop-booking-20250314-1423
+```
+
+### After project is created, user gets
+
+- Live URL (Vercel/Railway deployment)
+- GitHub repo URL (can clone and modify)
+
+---
+
+## Component 6 — Vercel Deployment
+
+For web apps and landing pages, Vercel is the fastest free deploy.
+
+### Setup
+
+1. Sign up at vercel.com
+2. Connect your GitHub account
+3. Go to Settings → Tokens → Create Token
+4. Store as `VERCEL_TOKEN`
+
+### How n8n deploys
+
+```json
+POST https://api.vercel.com/v13/deployments
+Authorization: Bearer {VERCEL_TOKEN}
+
+{
+  "name": "goldy-project-name",
+  "gitSource": {
+    "type": "github",
+    "org": "your-github-username",
+    "repo": "goldy-project-name-20250314",
+    "ref": "main"
+  },
+  "projectSettings": {
+    "framework": null,
+    "buildCommand": null,
+    "outputDirectory": null
+  }
+}
+```
+
+Response includes `url` — the live deployment URL.
+
+---
+
+## Environment Variables — Complete List
+
+### Railway (hub server)
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+N8N_WEBHOOK_URL=https://your-instance.app.n8n.cloud/webhook/goldy-build
+GITHUB_TOKEN=ghp_...
+SECRET_CALLBACK_TOKEN=any-random-32-char-string
+PORT=8080
+```
+
+### n8n Cloud Credentials
+
+Add these in n8n Settings → Credentials:
+
+```
+Anthropic API Key: sk-ant-...
+GitHub Personal Access Token: ghp_...
+e2b API Key: e2b_...
+Vercel Token: ...
+Railway Token: ...
+HUB_URL: https://your-hub.railway.app
+SECRET_CALLBACK_TOKEN: same-as-above
+```
+
+---
+
+## Deployment Order (do this in order)
+
+### Step 1 — n8n Cloud
+1. Sign up at app.n8n.cloud
+2. Create workflow "Goldy Builder"
+3. Add all credentials
+4. Build the 7-node workflow described above
+5. Activate it → copy the webhook URL
+
+### Step 2 — GitHub
+1. Create GitHub account if needed
+2. Generate personal access token
+3. Test: `curl -H "Authorization: token YOUR_TOKEN" https://api.github.com/user`
+
+### Step 3 — e2b
+1. Sign up at e2b.dev
+2. Get API key from dashboard
+
+### Step 4 — Vercel
+1. Sign up at vercel.com
+2. Connect GitHub account
+3. Generate API token
+
+### Step 5 — Railway (hub)
+1. Sign up at railway.app
+2. Create new project → Deploy from GitHub
+3. Connect your hub repo
+4. Add all environment variables
+5. Deploy → copy your hub URL
+
+### Step 6 — Update n8n
+- Set `HUB_URL` credential to your Railway URL
+- Test the full flow end to end
+
+---
+
+## Testing the System
+
+Send this test idea to verify everything works:
+
+> "Build me a simple todo list web app with the ability to add, complete,
+> and delete tasks. Dark theme, clean modern design."
+
+Expected output within 5 minutes:
+- GitHub repo created with all files
+- Vercel deployment live
+- URL displayed in Chat UI
+
+---
+
+## Cost Estimate
+
+| Service | Free tier | Paid |
+|---|---|---|
+| Railway | $5 credit/mo | $5/mo after |
+| n8n Cloud | 5 workflows, 20 executions/day | $20/mo for more |
+| Anthropic | Pay per token | ~$0.10-0.30 per project |
+| e2b | 100 sandbox hours/mo | $0.10/hour after |
+| Vercel | 100 deploys/day | Free for hobby |
+| GitHub | Unlimited public repos | Free |
+
+**Realistic cost: $5-15/month** for moderate usage.
+
+---
+
+## What to Tell the Hub's Replit Agent
+
+(If you use Replit to build the hub UI)
+
+> Build a Flask web application called "Goldy Builds" — an AI project builder hub.
+> Dark theme (#0d1117 background). Single page with a centered card layout.
+> Include: a golden logo "⚒️ GOLDY BUILDS", a large textarea for project ideas,
+> a golden submit button, and a status section that appears after submit showing
+> a live scrolling build log and final URL when done.
+> 
+> Backend endpoints: POST /build (accepts {idea}), GET /status (returns build state),
+> POST /callback (receives completion from n8n with {url, status}).
+> 
+> Use Flask, python-dotenv, requests. Store config in env vars. Include Procfile
+> for Railway deployment. The UI polls /status every 3 seconds via JavaScript fetch.
+> Make the design genuinely beautiful — this is a premium product.
+
+---
+
+## Summary
+
+```
+YOU → Chat UI (Railway) → n8n Cloud → Claude API (generates code)
+                                     → GitHub API (stores code)  
+                                     → e2b.dev (tests code)
+                                     → Vercel/Railway (deploys)
+                        → Chat UI receives URL → YOU
+```
+
+Every service has a real, working API. No waitlists. No closed betas.
+Total setup time: ~2 hours. Then fully autonomous.
+```

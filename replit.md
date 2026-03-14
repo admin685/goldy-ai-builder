@@ -1,6 +1,8 @@
-# Workspace
+# Goldy Builds — AI Project Builder
 
 ## Overview
+
+**Goldy Builds** is an AI-powered project builder hub. Users describe any software project idea, and the system autonomously generates full working code via Claude, pushes it to a GitHub repo, and deploys it to Vercel — all in minutes.
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
@@ -52,12 +54,29 @@ Every package extends `tsconfig.base.json` which sets `composite: true`. The roo
 
 ### `artifacts/api-server` (`@workspace/api-server`)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+Express 5 API server serving both the Goldy Builds chat UI and the builder backend.
 
 - Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
+- App setup: `src/app.ts` — serves HTML at `/api`, mounts API routes at `/api`, serves static files from `public/`
+- Routes:
+  - `src/routes/health.ts` — `GET /healthz`
+  - `src/routes/build.ts` — `POST /build`, `GET /status`, `POST /callback`
+- Static: `public/index.html` — the Goldy Builds chat UI (dark theme, canvas animation, build log)
+- Depends on: `@workspace/db`, `@workspace/api-zod`, `@anthropic-ai/sdk`
+
+**Required environment variables:**
+- `ANTHROPIC_API_KEY` — Claude API key for code generation
+- `GITHUB_TOKEN` — GitHub personal access token (scopes: `repo`) for creating repos
+- `VERCEL_TOKEN` — Vercel API token for deployment
+- `SECRET_CALLBACK_TOKEN` — optional token to secure the `/callback` endpoint
+
+**Build flow:**
+1. `POST /api/build` — accepts `{idea}`, calls Claude to generate complete project spec + code
+2. Claude returns JSON with `project_name`, `files`, `tech_stack`, `features`
+3. GitHub API creates a repo and pushes all generated files
+4. Vercel API deploys the repo (if `VERCEL_TOKEN` is set)
+5. `GET /api/status` — returns build state, live logs, and final URL when done
+
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
 - Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
