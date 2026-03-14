@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -32,3 +32,11 @@ externalPort = 80
 [[ports]]
 localPort = 8081
 externalPort = 5000
+
+[nix]
+channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+JWT_SECRET = "ab17bc176fb1ec8e2f6a334d80f269324508a7868f0e2714b95d3932c1eb882b5ed8b7a9b0f10296755597479f6d2c52"

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Register — Goldy Builds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e2c97e;
+    --bg: #0a0a0f;
+    --card-bg: #111118;
+    --border: rgba(201,168,76,0.25);
+    --text: #e8e0d0;
+    --muted: #8a8070;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: radial-gradient(ellipse at 70% 20%, rgba(201,168,76,0.07) 0%, var(--bg) 60%);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 0 60px rgba(201,168,76,0.06);
+  }
+  .logo { text-align: center; margin-bottom: 8px; }
+  .logo h1 { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); }
+  .subtitle { text-align: center; color: var(--muted); font-size: 0.9rem; margin-bottom: 36px; }
+  label { display: block; font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  input {
+    width: 100%;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.2s;
+    margin-bottom: 20px;
+  }
+  input:focus { border-color: var(--gold); }
+  .btn {
+    width: 100%;
+    background: linear-gradient(135deg, #b8902a, #e2c97e);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 8px;
+    padding: 13px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.2s;
+    margin-top: 4px;
+  }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error {
+    background: rgba(220,50,50,0.1);
+    border: 1px solid rgba(220,50,50,0.4);
+    color: #ff8888;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.88rem;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .footer-link { text-align: center; margin-top: 24px; color: var(--muted); font-size: 0.88rem; }
+  .footer-link a { color: var(--gold); text-decoration: none; }
+  .footer-link a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo"><h1>Goldy</h1></div>
+  <p class="subtitle">Create your free account</p>
+  <div class="error" id="err"></div>
+  <form id="form" onsubmit="doRegister(event)">
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@example.com" required autocomplete="email" />
+    <label>Password</label>
+    <input type="password" id="password" placeholder="At least 6 characters" required autocomplete="new-password" minlength="6" />
+    <button class="btn" id="btn" type="submit">Create Account</button>
+  </form>
+  <p class="footer-link">Already have an account? <a href="/login">Sign in</a></p>
+</div>
+<script>
+  const API = '/api';
+  if (localStorage.getItem('gb_token')) window.location.href = '/dashboard';
+
+  async function doRegister(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn');
+    const err = document.getElementById('err');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Creating account…';
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { err.textContent = data.error || 'Registration failed'; err.style.display = 'block'; return; }
+      localStorage.setItem('gb_token', data.token);
+      localStorage.setItem('gb_user', JSON.stringify(data.user));
+      window.location.href = '/dashboard';
+    } catch (ex) {
+      err.textContent = 'Network error — please try again';
+      err.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+    }
+  }
+</script>
+</body>
+</html>

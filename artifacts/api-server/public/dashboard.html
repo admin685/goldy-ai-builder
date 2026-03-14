@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Goldy Builds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e2c97e;
+    --bg: #0a0a0f;
+    --card-bg: #111118;
+    --border: rgba(201,168,76,0.2);
+    --text: #e8e0d0;
+    --muted: #8a8070;
+  }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.95);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--gold); text-decoration: none; }
+  .nav-right { display: flex; gap: 16px; align-items: center; }
+  .nav-email { color: var(--muted); font-size: 0.85rem; }
+  .nav-btn {
+    background: linear-gradient(135deg, #b8902a, #e2c97e);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 16px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+  }
+  .nav-btn.ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .nav-btn.ghost:hover { border-color: var(--gold); color: var(--gold); }
+  main { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+  .page-header { margin-bottom: 32px; }
+  .page-header h1 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--gold-light); margin-bottom: 6px; }
+  .page-header p { color: var(--muted); font-size: 0.9rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .project-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .project-card:hover { border-color: rgba(201,168,76,0.5); box-shadow: 0 0 24px rgba(201,168,76,0.07); }
+  .project-name { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .project-date { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; }
+  .project-links { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+  .project-links a {
+    font-size: 0.78rem;
+    color: var(--gold);
+    text-decoration: none;
+    border: 1px solid rgba(201,168,76,0.3);
+    border-radius: 4px;
+    padding: 3px 9px;
+  }
+  .project-links a:hover { background: rgba(201,168,76,0.08); }
+  .card-actions { display: flex; gap: 8px; }
+  .card-btn {
+    flex: 1;
+    background: linear-gradient(135deg, #b8902a, #e2c97e);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    text-decoration: none;
+    font-family: inherit;
+    display: block;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 80px 24px;
+    color: var(--muted);
+  }
+  .empty-state h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--gold-light); margin-bottom: 12px; }
+  .empty-state p { margin-bottom: 24px; }
+  .loading { text-align: center; padding: 60px; color: var(--muted); }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Goldy</a>
+  <div class="nav-right">
+    <span class="nav-email" id="nav-email"></span>
+    <a class="nav-btn" href="/app">+ New Build</a>
+    <button class="nav-btn ghost" onclick="logout()">Logout</button>
+  </div>
+</nav>
+<main>
+  <div class="page-header">
+    <h1>My Projects</h1>
+    <p>All the apps your crew has shipped</p>
+  </div>
+  <div id="content" class="loading">
+    <div class="spinner"></div>
+    <p>Loading your projects…</p>
+  </div>
+</main>
+<script>
+  const API = '/api';
+  const token = localStorage.getItem('gb_token');
+  if (!token) { window.location.href = '/login'; }
+
+  const user = JSON.parse(localStorage.getItem('gb_user') || '{}');
+  document.getElementById('nav-email').textContent = user.email || '';
+
+  function logout() {
+    localStorage.removeItem('gb_token');
+    localStorage.removeItem('gb_user');
+    window.location.href = '/login';
+  }
+
+  function formatDate(str) {
+    const d = new Date(str);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  async function loadProjects() {
+    const content = document.getElementById('content');
+    try {
+      const res = await fetch(`${API}/auth/projects`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (res.status === 401) { logout(); return; }
+      const projects = await res.json();
+
+      if (!projects.length) {
+        content.innerHTML = `
+          <div class="empty-state">
+            <h2>No projects yet</h2>
+            <p>Build something great with your crew.</p>
+            <a class="card-btn" href="/app" style="display:inline-block;width:auto;padding:12px 28px;">Start Building</a>
+          </div>`;
+        return;
+      }
+
+      content.className = 'grid';
+      content.innerHTML = projects.map(p => `
+        <div class="project-card">
+          <div class="project-name" title="${p.name}">${p.name}</div>
+          <div class="project-date">${formatDate(p.created_at)}</div>
+          <div class="project-links">
+            ${p.vercel_url ? `<a href="${p.vercel_url}" target="_blank">🌐 Live Site</a>` : ''}
+            ${p.github_url ? `<a href="${p.github_url}" target="_blank">🐙 GitHub</a>` : ''}
+          </div>
+          <div class="card-actions">
+            <a class="card-btn" href="/app">Edit with Goldy</a>
+          </div>
+        </div>`).join('');
+    } catch (e) {
+      content.innerHTML = `<p style="color:#ff8888;text-align:center">Failed to load projects. Please refresh.</p>`;
+    }
+  }
+
+  loadProjects();
+</script>
+</body>
+</html>

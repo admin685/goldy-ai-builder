@@ -702,6 +702,14 @@ textarea#idea::placeholder { color: var(--text-muted); }
 <script>
   const API = '/api';
 
+  // ── Auth helpers ─────────────────────────────────────────────────────────
+  const token = localStorage.getItem('gb_token');
+  if (!token) { window.location.href = '/login'; }
+
+  function getAuthHeaders(extra = {}) {
+    return { 'Authorization': `Bearer ${token}`, ...extra };
+  }
+
   let pollTimer    = null;
   let animFrame    = null;
   let lastLogCount = 0;
@@ -927,7 +935,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
     try {
       const res = await fetch(`${API}/build`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ idea }),
       });
       if (!res.ok) { const d = await res.json(); showError(d.error || 'Failed to start build'); return; }
@@ -951,7 +959,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
         fd.append('file', selectedFile);
         const hint = '';
         if (hint) fd.append('hint', hint);
-        res = await fetch(`${API}/import`, { method: 'POST', body: fd });
+        res = await fetch(`${API}/import`, { method: 'POST', headers: getAuthHeaders(), body: fd });
       } else {
         const urlVal = importMode === 'github'
           ? document.getElementById('github-url').value.trim()
@@ -959,7 +967,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
         if (!urlVal) { alert('Please enter a URL'); document.getElementById('import-btn').disabled = false; return; }
         res = await fetch(`${API}/import`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({ url: urlVal }),
         });
       }

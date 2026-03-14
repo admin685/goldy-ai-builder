@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { createHash } from "crypto";
+import { requireAuth } from "../middlewares/auth.js";
+import { saveProject } from "../lib/projects.js";
 
 const router: IRouter = Router();
 
@@ -250,6 +252,7 @@ export interface BuildState {
   };
   error?: string;
   idea?: string;
+  userId?: number;
 }
 
 export const state: BuildState = {
@@ -265,7 +268,7 @@ export function log(msg: string, type: BuildLog["type"] = "info") {
   console.log(`[Goldy] [${type.toUpperCase()}] ${msg}`);
 }
 
-export function resetState(idea: string) {
+export function resetState(idea: string, userId?: number) {
   state.status = "building";
   state.stage = "";
   state.stageData = {};
@@ -273,6 +276,7 @@ export function resetState(idea: string) {
   state.result = {};
   state.error = undefined;
   state.idea = idea;
+  state.userId = userId;
   log("▶ Goldy is reviewing the blueprints...", "info");
 }
 
@@ -928,6 +932,16 @@ async function runBuild(idea: string) {
     };
 
     log(`✓ Crew knocked it out! ${Object.keys(files).length} files built.`, "success");
+
+    if (state.userId) {
+      await saveProject({
+        userId: state.userId,
+        name: projectName,
+        vercelUrl: deployUrl || undefined,
+        githubUrl: repoUrl || undefined,
+        files,
+      });
+    }
   } catch (err) {
     state.status = "error";
     state.stage = "error";
@@ -938,7 +952,7 @@ async function runBuild(idea: string) {
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
-router.post("/build", (req, res) => {
+router.post("/build", requireAuth, (req, res) => {
   const { idea } = req.body as { idea?: string };
 
   if (!idea || idea.trim().length < 5) {
@@ -951,7 +965,7 @@ router.post("/build", (req, res) => {
     return;
   }
 
-  resetState(idea.trim());
+  resetState(idea.trim(), req.user?.id);
   void runBuild(idea.trim());
   res.json({ ok: true, message: "Build started" });
 });

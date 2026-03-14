@@ -13,19 +13,26 @@
     "@workspace/api-zod": "workspace:*",
     "@workspace/db": "workspace:*",
     "adm-zip": "^0.5.16",
+    "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
-    "multer": "^2.1.1"
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.1.1",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
+    "@types/bcrypt": "^6.0.0",
+    "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "catalog:",
+    "@types/pg": "^8.18.0",
     "esbuild": "^0.27.3",
     "tsx": "catalog:"
   }

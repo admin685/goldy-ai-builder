@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Goldy Builds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold: #c9a84c;
+    --gold-light: #e2c97e;
+    --bg: #0a0a0f;
+    --card-bg: #111118;
+    --border: rgba(201,168,76,0.2);
+    --text: #e8e0d0;
+    --muted: #8a8070;
+    --red: rgba(220,50,50,0.8);
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 32px; border-bottom: 1px solid var(--border);
+    background: rgba(10,10,15,0.95); position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--gold); text-decoration: none; }
+  .nav-right { display: flex; gap: 16px; align-items: center; }
+  .badge { background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #ff8888; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; }
+  .nav-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 7px 16px; font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: inherit; }
+  .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
+  main { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
+  .stat-card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; text-align: center;
+  }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--gold); }
+  .stat-label { color: var(--muted); font-size: 0.8rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .section-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-light); margin-bottom: 16px; margin-top: 36px; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { text-align: left; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
+  td { padding: 10px 12px; border-bottom: 1px solid rgba(201,168,76,0.07); color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:hover td { background: rgba(201,168,76,0.03); }
+  .role-badge {
+    font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .role-badge.admin { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.4); color: var(--gold); }
+  .role-badge.user { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--muted); }
+  .link-cell a { color: var(--gold); text-decoration: none; font-size: 0.82rem; }
+  .link-cell a:hover { text-decoration: underline; }
+  .loading { text-align: center; padding: 60px; color: var(--muted); }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-msg { background: rgba(220,50,50,0.1); border: 1px solid rgba(220,50,50,0.4); color: #ff8888; border-radius: 8px; padding: 14px; text-align: center; }
+</style>
+</head>
+<body>
+<nav>
+  <a class="nav-logo" href="/">Goldy</a>
+  <div class="nav-right">
+    <span class="badge">ADMIN</span>
+    <button class="nav-btn" onclick="logout()">Logout</button>
+  </div>
+</nav>
+<main>
+  <div class="stats" id="stats">
+    <div class="stat-card"><div class="spinner"></div></div>
+  </div>
+  <div id="users-section"></div>
+  <div id="projects-section"></div>
+</main>
+<script>
+  const API = '/api';
+  const token = localStorage.getItem('gb_token');
+  if (!token) { window.location.href = '/login'; }
+
+  const user = JSON.parse(localStorage.getItem('gb_user') || '{}');
+  if (user.role !== 'admin') { window.location.href = '/dashboard'; }
+
+  function logout() {
+    localStorage.removeItem('gb_token');
+    localStorage.removeItem('gb_user');
+    window.location.href = '/login';
+  }
+
+  function fmt(str) {
+    const d = new Date(str);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  async function load() {
+    try {
+      const headers = { 'Authorization': `Bearer ${token}` };
+      const [usersRes, projectsRes] = await Promise.all([
+        fetch(`${API}/auth/admin/users`, { headers }),
+        fetch(`${API}/auth/admin/projects`, { headers }),
+      ]);
+
+      if (usersRes.status === 401 || usersRes.status === 403) { window.location.href = '/login'; return; }
+
+      const users = await usersRes.json();
+      const projects = await projectsRes.json();
+
+      document.getElementById('stats').innerHTML = `
+        <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Total Users</div></div>
+        <div class="stat-card"><div class="stat-num">${projects.length}</div><div class="stat-label">Total Projects</div></div>
+        <div class="stat-card"><div class="stat-num">${users.filter(u => u.role === 'admin').length}</div><div class="stat-label">Admins</div></div>
+        <div class="stat-card"><div class="stat-num">${projects.filter(p => p.vercel_url).length}</div><div class="stat-label">Deployed</div></div>
+      `;
+
+      document.getElementById('users-section').innerHTML = `
+        <h2 class="section-title">Users</h2>
+        <table>
+          <thead><tr><th>#</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
+          <tbody>
+            ${users.map((u, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${u.email}</td>
+                <td><span class="role-badge ${u.role}">${u.role}</span></td>
+                <td>${fmt(u.created_at)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+
+      document.getElementById('projects-section').innerHTML = `
+        <h2 class="section-title">All Projects</h2>
+        <table>
+          <thead><tr><th>#</th><th>Name</th><th>User</th><th>Live URL</th><th>GitHub</th><th>Built</th></tr></thead>
+          <tbody>
+            ${projects.map((p, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td title="${p.name}">${p.name}</td>
+                <td title="${p.user_email}">${p.user_email}</td>
+                <td class="link-cell">${p.vercel_url ? `<a href="${p.vercel_url}" target="_blank">View</a>` : '—'}</td>
+                <td class="link-cell">${p.github_url ? `<a href="${p.github_url}" target="_blank">Repo</a>` : '—'}</td>
+                <td>${fmt(p.created_at)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+    } catch (e) {
+      document.getElementById('stats').innerHTML = `<div class="error-msg">Failed to load admin data. Please refresh.</div>`;
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>

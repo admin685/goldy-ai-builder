@@ -586,7 +586,8 @@
       <a href="#how-it-works">How it works</a>
       <a href="#features">Features</a>
       <a href="#demo">Live demo</a>
-      <a href="/app" class="nav-cta">Start Building →</a>
+      <a href="/login" id="nav-login-link">Login</a>
+      <a href="/app" class="nav-cta" id="nav-cta-link">Start Building →</a>
     </div>
     <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
       <span></span><span></span><span></span>
@@ -794,6 +795,17 @@
   </footer>
 
   <script>
+    // ── Auth-aware nav
+    (function() {
+      const token = localStorage.getItem('gb_token');
+      const loginLink = document.getElementById('nav-login-link');
+      const ctaLink = document.getElementById('nav-cta-link');
+      if (token && loginLink) {
+        loginLink.textContent = 'Dashboard';
+        loginLink.href = '/dashboard';
+      }
+    })();
+
     // ── Nav scroll effect
     const nav = document.getElementById('main-nav');
     window.addEventListener('scroll', () => {

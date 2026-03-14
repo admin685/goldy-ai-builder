@@ -3,6 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
 import AdmZip from "adm-zip";
 import { state, log, resetState, createGitHubRepo, pushFilesToGitHub, deployToVercel, runDesignPipeline } from "./build.js";
+import { requireAuth } from "../middlewares/auth.js";
+import { saveProject } from "../lib/projects.js";
 
 const router: IRouter = Router();
 
@@ -306,6 +308,16 @@ async function runImport(
     log(`✓ Crew rebuilt it! ${Object.keys(outFiles).length} files ready.`, "success");
     if (deployUrl) log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
     else if (repoUrl) log(`✓ Petya stored it at: ${repoUrl}`, "success");
+
+    if (state.userId) {
+      await saveProject({
+        userId: state.userId,
+        name: projectName,
+        vercelUrl: deployUrl || undefined,
+        githubUrl: repoUrl || undefined,
+        files: outFiles,
+      });
+    }
   } catch (err) {
     state.status = "error";
     state.error = (err as Error).message;
@@ -321,7 +333,7 @@ function conditionalMulter(req: Request, res: Response, next: NextFunction) {
   }
 }
 
-router.post("/import", conditionalMulter, (req, res) => {
+router.post("/import", requireAuth, conditionalMulter, (req, res) => {
   if (state.status === "building") {
     res.status(409).json({ error: "A build is already in progress" });
     return;
@@ -332,7 +344,7 @@ router.post("/import", conditionalMulter, (req, res) => {
 
   const mode = file ? "zip" : (body.mode || "");
 
-  resetState(`Import & Rebuild (${mode})`);
+  resetState(`Import & Rebuild (${mode})`, req.user?.id);
 
   if (mode === "zip") {
     if (!file) {
