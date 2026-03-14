@@ -97,12 +97,21 @@ No markdown fences, just JSON.`,
     return;
   }
 
-  const suggestions = JSON.parse(match[0]) as Array<{
-    member: string;
-    suggested_prompt: string;
-    rationale: string;
-  }>;
+  let suggestions: Array<{ member: string; suggested_prompt: string; rationale: string }>;
+  try {
+    suggestions = JSON.parse(match[0]);
+    if (!Array.isArray(suggestions)) {
+      console.log("[Goldy] [WeeklyJob] Parsed value is not an array");
+      await markRun();
+      return;
+    }
+  } catch (parseErr) {
+    console.error("[Goldy] [WeeklyJob] JSON parse error:", parseErr);
+    await markRun();
+    return;
+  }
 
+  let saved = 0;
   for (const s of suggestions) {
     if (members.includes(s.member) && s.suggested_prompt) {
       await queryOne(
@@ -110,10 +119,11 @@ No markdown fences, just JSON.`,
          VALUES ($1, $2, $3)`,
         [s.member, s.suggested_prompt, s.rationale || ""]
       );
+      saved++;
     }
   }
 
-  console.log(`[Goldy] [WeeklyJob] Saved ${suggestions.length} prompt suggestions`);
+  console.log(`[Goldy] [WeeklyJob] Saved ${saved} prompt suggestions`);
   await markRun();
 }
 
@@ -143,6 +153,13 @@ export async function startWeeklyJob(): Promise<void> {
       `CREATE TABLE IF NOT EXISTS admin_settings (
         key TEXT PRIMARY KEY,
         value TEXT,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      )`
+    );
+    await query(
+      `CREATE TABLE IF NOT EXISTS system_prompts (
+        member TEXT PRIMARY KEY,
+        prompt TEXT NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT now()
       )`
     );
