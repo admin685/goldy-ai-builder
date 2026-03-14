@@ -45,8 +45,8 @@
   /* ── Split panels ── */
   .panels { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-  /* ── Left: preview ── */
-  .left-panel { display: flex; flex-direction: column; width: 60%; min-width: 280px; border-right: 1px solid var(--border); position: relative; }
+  /* ── Left: preview (now on right) ── */
+  .left-panel { display: flex; flex-direction: column; flex: 1; min-width: 280px; position: relative; }
   .panel-bar { display: flex; align-items: center; justify-content: space-between; padding: 7px 14px; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .panel-bar-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
   .url-pill { font-size: 0.72rem; color: var(--muted); background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 4px; padding: 2px 8px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -89,8 +89,8 @@
   }
   .divider:hover, .divider.dragging { background: var(--gold); }
 
-  /* ── Right: chat ── */
-  .right-panel { display: flex; flex-direction: column; flex: 1; min-width: 260px; }
+  /* ── Right: chat (now on left) ── */
+  .right-panel { display: flex; flex-direction: column; width: 40%; flex: none; min-width: 260px; border-right: 1px solid var(--border); }
   .chat-header { padding: 7px 14px; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .chat-header-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 600; }
 
@@ -172,27 +172,7 @@
 
 <div class="panels" id="panels">
 
-  <!-- Left: live preview -->
-  <div class="left-panel" id="left-panel">
-    <div class="panel-bar">
-      <span class="panel-bar-label">Live Preview</span>
-      <span class="url-pill" id="url-pill">—</span>
-    </div>
-    <div class="iframe-wrap">
-      <iframe id="preview-frame" title="Live preview" allowfullscreen></iframe>
-      <!-- Log overlay during edits -->
-      <div class="log-overlay" id="log-overlay">
-        <div class="overlay-spinner"></div>
-        <div class="overlay-title">Goldy is working on it…</div>
-        <div class="log-feed" id="log-feed"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Divider -->
-  <div class="divider" id="divider"></div>
-
-  <!-- Right: chat -->
+  <!-- Left: chat (was right) -->
   <div class="right-panel" id="right-panel">
     <div class="chat-header">
       <span class="chat-header-label">Chat with Goldy</span>
@@ -208,6 +188,26 @@
       <div class="send-row">
         <span class="send-hint">Shift+Enter for new line</span>
         <button id="send-btn" onclick="sendEdit()">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider" id="divider"></div>
+
+  <!-- Right: live preview (was left) -->
+  <div class="left-panel" id="left-panel">
+    <div class="panel-bar">
+      <span class="panel-bar-label">Live Preview</span>
+      <span class="url-pill" id="url-pill">—</span>
+    </div>
+    <div class="iframe-wrap">
+      <iframe id="preview-frame" title="Live preview" allowfullscreen></iframe>
+      <!-- Log overlay during edits -->
+      <div class="log-overlay" id="log-overlay">
+        <div class="overlay-spinner"></div>
+        <div class="overlay-title">Goldy is working on it…</div>
+        <div class="log-feed" id="log-feed"></div>
       </div>
     </div>
   </div>
@@ -490,9 +490,9 @@
     const rect = panelsEl.getBoundingClientRect();
     const pct = ((e.clientX - rect.left) / rect.width) * 100;
     const clamped = Math.max(25, Math.min(75, pct));
-    leftPanel.style.width = clamped + '%';
-    rightPanel.style.flex = 'none';
-    rightPanel.style.width = (100 - clamped - 0.3) + '%';
+    rightPanel.style.width = clamped + '%';
+    leftPanel.style.flex = 'none';
+    leftPanel.style.width = (100 - clamped - 0.3) + '%';
   });
 
   document.addEventListener('mouseup', () => {
