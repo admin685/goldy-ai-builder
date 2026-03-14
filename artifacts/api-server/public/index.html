@@ -12,10 +12,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Syne:wght@700;800&display=swap');
 
 :root {
-  --gold: #34D399;
-  --gold-light: #6EE7B7;
-  --gold-dark: #059669;
+  --gold: #F59E0B;
+  --gold-light: #FBBF24;
+  --gold-dark: #D97706;
   --gold-glow: rgba(52, 211, 153, 0.18);
+  --accent: #34D399;
+  --accent-dark: #059669;
+  --accent-glow: rgba(52, 211, 153, 0.18);
   --bg: #111C1A;
   --bg2: #172320;
   --bg3: #1E2D2A;
@@ -62,7 +65,7 @@ body {
 .logo {
   font-family: var(--font-display);
   font-size: 2rem;
-  color: var(--gold);
+  color: var(--accent);
   letter-spacing: 2px;
   display: flex;
   align-items: center;
@@ -100,9 +103,9 @@ body {
 }
 
 .tab-btn.active {
-  background: var(--gold);
+  background: var(--accent);
   color: #111C1A;
-  box-shadow: 0 2px 12px var(--gold-glow);
+  box-shadow: 0 2px 12px var(--accent-glow);
 }
 
 /* ── Cards ── */
@@ -131,8 +134,8 @@ textarea#idea {
 }
 
 textarea#idea:focus {
-  border-color: var(--gold);
-  box-shadow: 0 0 0 3px var(--gold-glow);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 textarea#idea::placeholder { color: var(--text-muted); }
@@ -141,7 +144,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 .btn-build {
   width: 100%;
   padding: 15px;
-  background: var(--gold);
+  background: var(--accent);
   color: #111C1A;
   font-family: var(--font-display);
   font-size: 1.35rem;
@@ -150,7 +153,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   border-radius: var(--radius);
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0 4px 20px var(--gold-glow);
+  box-shadow: 0 4px 20px var(--accent-glow);
   margin-bottom: 14px;
 }
 
@@ -169,7 +172,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   transition: var(--transition);
 }
 
-.btn-secondary:hover { border-color: var(--gold); }
+.btn-secondary:hover { border-color: var(--accent); }
 
 .btn-reset {
   margin-top: 20px;
@@ -184,7 +187,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   transition: var(--transition);
 }
 
-.btn-reset:hover { border-color: var(--gold); color: var(--text); }
+.btn-reset:hover { border-color: var(--accent); color: var(--text); }
 
 /* ── Example chips ── */
 .examples {
@@ -205,7 +208,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   color: var(--text-muted);
 }
 
-.example-chip:hover { border-color: var(--gold); color: var(--gold); }
+.example-chip:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Import panel ── */
 #import-panel { display: none; }
@@ -233,7 +236,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   transition: var(--transition);
 }
 
-.mode-btn.active { background: var(--gold); color: #111C1A; }
+.mode-btn.active { background: var(--accent); color: #111C1A; }
 
 .drop-zone {
   border: 2px dashed var(--bg3);
@@ -246,8 +249,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
   margin-bottom: 16px;
 }
 
-.drop-zone:hover { border-color: var(--gold); background: rgba(255, 215, 0, 0.03); }
-.drop-zone.drag-over { border-color: var(--gold); background: rgba(255, 215, 0, 0.06); }
+.drop-zone:hover { border-color: var(--accent); background: rgba(52, 211, 153, 0.03); }
+.drop-zone.drag-over { border-color: var(--accent); background: rgba(52, 211, 153, 0.06); }
 
 .drop-zone input[type="file"] {
   position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
@@ -290,7 +293,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   margin-bottom: 8px;
 }
 
-.url-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.url-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
 .url-hint {
   font-size: 0.8rem;
@@ -305,7 +308,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   font-family: var(--font-display);
   font-size: 1.3rem;
   letter-spacing: 1px;
-  color: var(--gold);
+  color: var(--accent);
   margin-bottom: 6px;
 }
 
@@ -403,7 +406,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   cursor: pointer;
 }
 
-.phase2-chip:hover { border-color: var(--gold); color: var(--gold); }
+.phase2-chip:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Status section ── */
 #status-section { display: none; }
@@ -450,15 +453,15 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
 .progress-bar {
   height: 100%;
-  background: var(--gold);
+  background: var(--accent);
   border-radius: 9999px;
   transition: width 0.4s ease;
-  box-shadow: 0 0 8px var(--gold-glow);
+  box-shadow: 0 0 8px var(--accent-glow);
   width: 0%;
 }
 
 .progress-bar.indeterminate {
-  background: linear-gradient(90deg, transparent 0%, var(--gold) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.4s ease infinite;
   width: 100%;
@@ -517,7 +520,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   gap: 12px;
 }
 
-.result-link:hover { border-color: var(--gold); transform: translateY(-1px); }
+.result-link:hover { border-color: var(--accent); transform: translateY(-1px); }
 
 .link-label {
   font-family: var(--font-body);
@@ -532,7 +535,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 .link-url {
   font-family: var(--font-body);
   font-size: 0.92rem;
-  color: var(--gold);
+  color: var(--accent);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -557,7 +560,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 .stat-value {
   font-family: var(--font-display);
   font-size: 1.6rem;
-  color: var(--gold);
+  color: var(--accent);
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -602,10 +605,10 @@ textarea#idea::placeholder { color: var(--text-muted); }
   transition: var(--transition);
 }
 
-.domain-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+.domain-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
 
 .btn-domain {
-  background: var(--gold);
+  background: var(--accent);
   color: #111C1A;
   border: none;
   padding: 10px 16px;
@@ -656,7 +659,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   font-weight: 700;
 }
 
-.dns-value { font-family: monospace; font-size: 0.8rem; color: var(--gold); flex: 1; word-break: break-all; }
+.dns-value { font-family: monospace; font-size: 0.8rem; color: var(--accent); flex: 1; word-break: break-all; }
 
 .dns-status.pending  { color: #e3b341; }
 .dns-status.verified { color: var(--green); }
@@ -677,12 +680,12 @@ textarea#idea::placeholder { color: var(--text-muted); }
   font-size: 0.75rem;
   transition: var(--transition);
 }
-.copy-btn:hover { color: var(--gold); }
+.copy-btn:hover { color: var(--accent); }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg3); }
-::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 6px; }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -747,8 +750,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
       <button class="btn-build" id="import-btn" onclick="startImport()">Import & Rebuild →</button>
 
-      <div style="padding:12px 14px;background:rgba(245,197,24,0.05);border:1px solid rgba(245,197,24,0.15);border-radius:8px;font-size:0.81rem;color:var(--text-muted)">
-        <strong style="color:var(--gold)">How it works:</strong> Goldy reads your source files, rebuilds them as a clean static web app via Claude, and deploys to Vercel automatically.
+      <div style="padding:12px 14px;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);border-radius:8px;font-size:0.81rem;color:var(--text-muted)">
+        <strong style="color:var(--accent)">How it works:</strong> Goldy reads your source files, rebuilds them as a clean static web app via Claude, and deploys to Vercel automatically.
       </div>
     </div>
 
@@ -1273,15 +1276,15 @@ textarea#idea::placeholder { color: var(--text-muted); }
     if (result.url) {
       const label = isCustomDomain ? '🌐 Live Site' : '🌐 Live URL';
       const extraStyle = isCustomDomain
-        ? 'border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.05);'
+        ? 'border-color:rgba(52,211,153,0.6);background:rgba(52,211,153,0.05);'
         : '';
       linksEl.innerHTML += `
         <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener" style="${extraStyle}">
           <div>
             <div class="link-label">${label}</div>
-            <div class="link-url" style="${isCustomDomain ? 'color:var(--gold);font-weight:600;' : ''}">${escHtml(result.url)}</div>
+            <div class="link-url" style="${isCustomDomain ? 'color:var(--accent);font-weight:600;' : ''}">${escHtml(result.url)}</div>
           </div>
-          <span style="color:var(--gold);font-size:1.1rem">↗</span>
+          <span style="color:var(--accent);font-size:1.1rem">↗</span>
         </a>`;
     }
 
@@ -1292,7 +1295,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
             <div class="link-label">💻 GitHub Repo</div>
             <div class="link-url">${escHtml(result.repoUrl)}</div>
           </div>
-          <span style="color:var(--gold);font-size:1.1rem">↗</span>
+          <span style="color:var(--accent);font-size:1.1rem">↗</span>
         </a>`;
     }
 
@@ -1401,7 +1404,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
       row.innerHTML = `<span class="dns-type">${escHtml(r.type)}</span><span>${escHtml(r.name)}</span><span class="dns-value">${escHtml(r.value)}</span><button class="copy-btn" onclick="copyVal(this,'${escHtml(r.value)}')">Copy</button>`;
       list.appendChild(row);
     });
-    instr.innerHTML = `<strong>How to add:</strong> Go to your registrar's DNS settings and add the record(s) above for <code style="color:var(--gold)">${escHtml(data.domain)}</code>. DNS changes propagate within 5–30 minutes.`;
+    instr.innerHTML = `<strong>How to add:</strong> Go to your registrar's DNS settings and add the record(s) above for <code style="color:var(--accent)">${escHtml(data.domain)}</code>. DNS changes propagate within 5–30 minutes.`;
     if (data.verified) {
       document.getElementById('check-result').textContent = '✓ Domain is connected!';
       document.getElementById('check-result').className   = 'check-result connected';
