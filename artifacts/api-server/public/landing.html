@@ -734,18 +734,40 @@ nav#main-nav.scrolled {
 }
 
 @media (max-width: 768px) {
-  nav#main-nav { flex-wrap: wrap; }
+  nav#main-nav { flex-wrap: wrap; padding: 0 1rem; }
   .nav-links { display: none; }
   .hamburger { display: flex; }
   .hero-inner { flex-direction: column; text-align: center; }
   .hero-text { flex: none; text-align: center; }
   .hero-buttons { justify-content: center; flex-wrap: wrap; }
-  .hero-stats { justify-content: center; }
+  .hero-stats { justify-content: center; flex-wrap: wrap; gap: 1.2rem; }
   .hero-headline { font-size: clamp(2rem, 6vw, 3.5rem); }
   .mascot-wrap { display: none; }
   .steps-row { grid-template-columns: 1fr; }
   .step-connector { display: none; }
   .features-grid { grid-template-columns: 1fr; }
+  .steps-grid { grid-template-columns: 1fr; }
+  #hero { padding: 80px 1rem 3rem; }
+  #how-it-works, #features { padding: 3rem 1rem; }
+  #demo { padding: 3rem 1rem; }
+  .footer-inner { flex-direction: column; text-align: center; }
+  .footer-links { justify-content: center; }
+  .demo-iframe { height: 320px; }
+  .terminal-block { padding: 1rem; font-size: 0.78rem; }
+}
+
+@media (max-width: 480px) {
+  .hero-headline { font-size: clamp(1.6rem, 8vw, 2.4rem); }
+  .hero-sub { font-size: 0.95rem; }
+  .hero-buttons { flex-direction: column; align-items: stretch; }
+  .hero-buttons .btn-primary,
+  .hero-buttons .btn-ghost { text-align: center; justify-content: center; padding: 14px 20px; }
+  .hero-stats { gap: 0.8rem; }
+  .hero-stat-val { font-size: 1.3rem; }
+  .section-title, .section-heading { font-size: clamp(1.4rem, 5vw, 2rem); }
+  .step-card, .feat-card, .step { padding: 1.2rem; }
+  nav#main-nav { padding: 0 0.75rem; }
+  .demo-iframe { height: 240px; }
 }
 
 * {

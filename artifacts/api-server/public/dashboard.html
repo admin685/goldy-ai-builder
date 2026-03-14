@@ -107,6 +107,22 @@
   .loading { text-align: center; padding: 60px; color: var(--muted); }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    nav { padding: 12px 16px; }
+    .nav-logo { font-size: 1.1rem; }
+    .nav-logo img { height: 30px; }
+    .nav-email { display: none; }
+    .nav-right { gap: 8px; }
+    .nav-btn { font-size: 0.78rem; padding: 6px 12px; }
+    main { padding: 24px 14px; }
+    .page-header h1 { font-size: 1.4rem; }
+    .page-header p { font-size: 0.82rem; }
+    .grid { grid-template-columns: 1fr; gap: 14px; }
+    .project-card { padding: 16px; }
+    .project-name { font-size: 0.95rem; }
+    .card-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+  }
 </style>
 </head>
 <body>

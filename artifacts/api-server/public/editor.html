@@ -184,6 +184,75 @@
   }
   .deploy-btn:hover { opacity: 0.85; }
   .deploy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .mobile-preview-btn {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 900;
+    background: linear-gradient(135deg, #b8902a, #e2c97e);
+    color: #0a0a0f;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(201,168,76,0.3);
+    min-height: 48px;
+  }
+
+  .preview-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: var(--bg);
+    flex-direction: column;
+  }
+  .preview-modal.open { display: flex; }
+  .preview-modal-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .preview-modal-bar span { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  .preview-modal-close {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+    min-height: 36px;
+  }
+  .preview-modal-close:hover { border-color: var(--gold); color: var(--gold); }
+  .preview-modal iframe { flex: 1; width: 100%; border: none; }
+
+  @media (max-width: 768px) {
+    .left-panel { display: none; }
+    .divider { display: none; }
+    .right-panel { width: 100%; border-right: none; }
+    .mobile-preview-btn { display: block; }
+    nav { padding: 8px 12px; }
+    .nav-project { font-size: 0.9rem; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nav-right { gap: 6px; }
+    .open-btn { font-size: 0.72rem; padding: 3px 7px; }
+    .deploy-btn { font-size: 0.72rem; padding: 4px 8px; }
+    .nav-status { font-size: 0.68rem; padding: 2px 7px; }
+    textarea#instruction { height: 60px; font-size: 0.85rem; }
+    .bubble { font-size: 0.85rem; }
+    .send-hint { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -243,6 +312,28 @@
   </div>
 
 </div>
+
+<button class="mobile-preview-btn" id="mobile-preview-btn" onclick="openMobilePreview()">Preview</button>
+
+<div class="preview-modal" id="preview-modal">
+  <div class="preview-modal-bar">
+    <span>Live Preview</span>
+    <button class="preview-modal-close" onclick="closeMobilePreview()">Close</button>
+  </div>
+  <iframe id="mobile-preview-frame" title="Mobile preview"></iframe>
+</div>
+
+<script>
+  function openMobilePreview() {
+    var src = document.getElementById('preview-frame').src;
+    document.getElementById('mobile-preview-frame').src = src;
+    document.getElementById('preview-modal').classList.add('open');
+  }
+  function closeMobilePreview() {
+    document.getElementById('preview-modal').classList.remove('open');
+    document.getElementById('mobile-preview-frame').src = '';
+  }
+</script>
 
 <script>
   const API = '/api';
