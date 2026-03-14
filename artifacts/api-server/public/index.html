@@ -7,25 +7,25 @@
   <title>Goldy Builds — AI Project Builder</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <style>
 :root {
-  --gold: #FFD700;
-  --gold-light: #ffe066;
-  --gold-dark: #c9a800;
-  --gold-glow: rgba(255, 215, 0, 0.18);
-  --bg: #0d1117;
-  --bg2: #161b22;
-  --bg3: #21262d;
-  --text: #e6edf3;
-  --text-muted: #8b949e;
-  --green: #3fb950;
+  --gold: #34D399;
+  --gold-light: #6EE7B7;
+  --gold-dark: #059669;
+  --gold-glow: rgba(52, 211, 153, 0.18);
+  --bg: #111C1A;
+  --bg2: #172320;
+  --bg3: #1E2D2A;
+  --text: #E8F5F0;
+  --text-muted: #7FA99A;
+  --green: #34D399;
   --red: #f85149;
   --radius: 12px;
   --radius-lg: 20px;
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --font-display: 'Bangers', cursive;
-  --font-body: 'Nunito', sans-serif;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -99,7 +99,7 @@ body {
 
 .tab-btn.active {
   background: var(--gold);
-  color: #0d1117;
+  color: #111C1A;
   box-shadow: 0 2px 12px var(--gold-glow);
 }
 
@@ -140,7 +140,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   width: 100%;
   padding: 15px;
   background: var(--gold);
-  color: #0d1117;
+  color: #111C1A;
   font-family: var(--font-display);
   font-size: 1.35rem;
   letter-spacing: 2px;
@@ -231,7 +231,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   transition: var(--transition);
 }
 
-.mode-btn.active { background: var(--gold); color: #0d1117; }
+.mode-btn.active { background: var(--gold); color: #111C1A; }
 
 .drop-zone {
   border: 2px dashed var(--bg3);
@@ -344,7 +344,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 }
 
 .roadmap-col.core .roadmap-col-title   { color: var(--green); }
-.roadmap-col.important .roadmap-col-title { color: var(--gold); }
+.roadmap-col.important .roadmap-col-title { color: #F59E0B; }
 .roadmap-col.extra .roadmap-col-title  { color: var(--text-muted); }
 
 .roadmap-items { list-style: none; padding: 0; margin: 0; }
@@ -383,7 +383,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: var(--gold);
+  color: #F59E0B;
   margin-bottom: 10px;
 }
 
@@ -411,7 +411,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   margin-bottom: 16px;
   border-radius: var(--radius);
   overflow: hidden;
-  background: #090d12;
+  background: #0D1614;
 }
 
 #goldy-canvas { display: block; width: 100%; height: 160px; }
@@ -469,7 +469,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
 /* ── Log panel ── */
 .log-panel {
-  background: #090d12;
+  background: #0D1614;
   border-radius: var(--radius);
   border: 1px solid var(--bg3);
   padding: 14px 16px;
@@ -604,7 +604,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
 .btn-domain {
   background: var(--gold);
-  color: #0d1117;
+  color: #111C1A;
   border: none;
   padding: 10px 16px;
   border-radius: var(--radius);
@@ -926,7 +926,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   }
 
   function initBots() {
-    const colors = ['#f5c518','#ffd700','#58a6ff','#3fb950','#f0883e'];
+    const colors = ['#34D399','#6EE7B7','#059669','#7FA99A','#F59E0B'];
     bots = [];
     for (let i = 0; i < 5; i++) {
       bots.push({
