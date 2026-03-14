@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Goldy Builds — Your idea. Live in 90 seconds.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:        #FFD700;
+      --gold-light:  #ffe066;
+      --gold-dark:   #c9a800;
+      --gold-glow:   rgba(255,215,0,0.18);
+      --bg:          #0d1117;
+      --bg2:         #161b22;
+      --bg3:         #21262d;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --muted:       #8b949e;
+      --green:       #3fb950;
+      --blue:        #58a6ff;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+      overflow-x: hidden;
+    }
+
+    /* ── Shared ── */
+    .gold-text {
+      background: linear-gradient(135deg, var(--gold-light), var(--gold), var(--gold-dark));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .section-label {
+      font-family: 'Nunito', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+
+    .section-heading {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(2.4rem, 5vw, 3.6rem);
+      letter-spacing: 1.5px;
+      line-height: 1.05;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── Reveal animations ── */
+    .reveal {
+      opacity: 0;
+      transform: translateY(36px);
+      transition: opacity 0.65s ease, transform 0.65s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.1s; }
+    .reveal-delay-2 { transition-delay: 0.2s; }
+    .reveal-delay-3 { transition-delay: 0.3s; }
+    .reveal-delay-4 { transition-delay: 0.4s; }
+    .reveal-delay-5 { transition-delay: 0.5s; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 64px;
+      background: rgba(13, 17, 23, 0.6);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(48, 54, 61, 0);
+      transition: border-color 0.3s;
+    }
+
+    nav.scrolled { border-bottom-color: var(--border); }
+
+    .nav-logo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.7rem;
+      letter-spacing: 1px;
+      text-decoration: none;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-logo .nav-icon {
+      -webkit-text-fill-color: initial;
+      background: none;
+      font-size: 1.4rem;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .nav-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 22px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #000 !important;
+      border-radius: 40px;
+      font-weight: 800;
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+    }
+
+    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .hamburger {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      cursor: pointer;
+      padding: 4px;
+      background: none;
+      border: none;
+    }
+
+    .hamburger span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 64px; left: 0; right: 0;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px 28px;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 99;
+    }
+
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a { color: var(--text); text-decoration: none; font-weight: 600; font-size: 1rem; }
+
+    /* ── Hero ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding: 100px 40px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-grid-bg {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,215,0,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,215,0,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,215,0,0.07) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    /* floating particles */
+    .particles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .particle {
+      position: absolute;
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: floatParticle linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes floatParticle {
+      0%   { opacity: 0; transform: translateY(0) scale(0); }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.3; }
+      100% { opacity: 0; transform: translateY(-120px) scale(1.5); }
+    }
+
+    .hero-inner {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,215,0,0.1);
+      border: 1px solid rgba(255,215,0,0.3);
+      border-radius: 40px;
+      padding: 5px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--gold);
+      margin-bottom: 22px;
+    }
+
+    .hero-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    .hero-headline {
+      font-family: 'Bangers', cursive;
+      font-size: clamp(3.6rem, 7vw, 6rem);
+      letter-spacing: 2px;
+      line-height: 1.0;
+      margin-bottom: 24px;
+    }
+
+    .hero-sub {
+      font-size: 1.15rem;
+      color: var(--muted);
+      max-width: 520px;
+      margin-bottom: 36px;
+      line-height: 1.7;
+    }
+
+    .hero-sub strong { color: var(--text); }
+
+    .hero-buttons { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 15px 32px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      color: #000;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 1.05rem;
+      text-decoration: none;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(255,215,0,0.25);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.92;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(255,215,0,0.38);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 26px;
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .btn-ghost:hover { border-color: var(--gold); color: var(--gold); }
+
+    .hero-stats {
+      display: flex;
+      gap: 28px;
+      margin-top: 44px;
+      flex-wrap: wrap;
+    }
+
+    .hero-stat-val {
+      font-family: 'Bangers', cursive;
+      font-size: 2rem;
+      letter-spacing: 1px;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .hero-stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 2px; font-weight: 600; }
+
+    /* ── Goldy mascot SVG ── */
+    .mascot-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      position: relative;
+    }
+
+    .mascot-shadow {
+      position: absolute;
+      bottom: -12px;
+      width: 160px;
+      height: 24px;
+      background: radial-gradient(ellipse, rgba(255,215,0,0.2) 0%, transparent 70%);
+      border-radius: 50%;
+      animation: shadowPulse 2.4s ease-in-out infinite;
+    }
+
+    @keyframes shadowPulse {
+      0%, 100% { transform: scaleX(1); opacity: 0.7; }
+      50%       { transform: scaleX(0.85); opacity: 0.4; }
+    }
+
+    .mascot-svg {
+      animation: mascotBob 2.4s ease-in-out infinite;
+      filter: drop-shadow(0 8px 24px rgba(255,215,0,0.22));
+    }
+
+    @keyframes mascotBob {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-10px); }
+    }
+
+    .arm-left  { animation: swingLeft  2.4s ease-in-out infinite; transform-origin: 110px 175px; }
+    .arm-right { animation: swingRight 2.4s ease-in-out infinite; transform-origin: 190px 175px; }
+    .tool      { animation: swingRight 2.4s ease-in-out infinite; transform-origin: 190px 175px; }
+
+    @keyframes swingLeft {
+      0%, 100% { transform: rotate(0deg); }
+      50%       { transform: rotate(8deg); }
+    }
+
+    @keyframes swingRight {
+      0%, 100% { transform: rotate(0deg); }
+      50%       { transform: rotate(-8deg); }
+    }
+
+    .eye-blink { animation: blink 4s ease-in-out infinite; }
+
+    @keyframes blink {
+      0%, 90%, 100% { transform: scaleY(1); }
+      95%            { transform: scaleY(0.1); }
+    }
+
+    /* ── Section wrapper ── */
+    section {
+      padding: 100px 40px;
+      position: relative;
+    }
+
+    .section-center { text-align: center; margin-bottom: 60px; }
+
+    .container { max-width: 1160px; margin: 0 auto; }
+
+    /* ── How it works ── */
+    #how-it-works { background: var(--bg); }
+
+    .steps-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 1fr 60px 1fr;
+      gap: 0;
+      align-items: start;
+      margin-top: 56px;
+    }
+
+    .step {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px 28px;
+      text-align: center;
+      position: relative;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .step:hover {
+      border-color: rgba(255,215,0,0.4);
+      transform: translateY(-4px);
+    }
+
+    .step::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+      border-radius: 20px 20px 0 0;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .step:hover::before { opacity: 1; }
+
+    .step-num {
+      font-family: 'Bangers', cursive;
+      font-size: 3.8rem;
+      line-height: 1;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .step-icon { font-size: 2.4rem; margin-bottom: 14px; }
+
+    .step-title {
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      letter-spacing: 0.5px;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .step-desc { font-size: 0.92rem; color: var(--muted); line-height: 1.6; }
+
+    .step-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: 80px;
+    }
+
+    .connector-arrow {
+      font-size: 1.6rem;
+      color: var(--gold);
+      opacity: 0.5;
+    }
+
+    /* ── Features ── */
+    #features { background: var(--bg2); }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-top: 56px;
+    }
+
+    .feat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 30px 26px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+    }
+
+    .feat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feat-card:hover {
+      border-color: rgba(255,215,0,0.35);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(255,215,0,0.08);
+    }
+
+    .feat-card:hover::after { opacity: 1; }
+
+    .feat-icon {
+      font-size: 2.2rem;
+      margin-bottom: 14px;
+      display: block;
+    }
+
+    .feat-title {
+      font-family: 'Bangers', cursive;
+      font-size: 1.35rem;
+      letter-spacing: 0.5px;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .feat-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.65; }
+
+    /* ── Demo ── */
+    #demo { background: var(--bg); }
+
+    .demo-frame-wrap {
+      position: relative;
+      border-radius: 20px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow:
+        0 0 0 1px rgba(255,215,0,0.15),
+        0 32px 80px rgba(0,0,0,0.5);
+      margin-top: 48px;
+      background: var(--bg2);
+    }
+
+    .demo-bar {
+      background: var(--bg3);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .demo-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+    }
+
+    .demo-url-bar {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .demo-iframe {
+      width: 100%;
+      height: 640px;
+      border: none;
+      display: block;
+    }
+
+    .demo-mobile-cta {
+      display: none;
+      text-align: center;
+      padding: 48px 24px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      margin-top: 48px;
+    }
+
+    .demo-mobile-cta p { color: var(--muted); margin-bottom: 20px; font-size: 1rem; }
+
+    /* ── Footer ── */
+    footer {
+      background: var(--bg2);
+      border-top: 1px solid transparent;
+      border-image: linear-gradient(90deg, transparent, var(--gold), transparent) 1;
+      padding: 48px 40px 36px;
+    }
+
+    .footer-inner {
+      max-width: 1160px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-logo {
+      font-family: 'Bangers', cursive;
+      font-size: 1.5rem;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, var(--gold-light), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      text-decoration: none;
+    }
+
+    .footer-credit {
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .footer-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover { color: var(--gold); }
+
+    /* ── Responsive ── */
+    @media (max-width: 1000px) {
+      .steps-row {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .step-connector { display: none; }
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+
+      .nav-links { display: none; }
+      .hamburger { display: flex; }
+
+      section { padding: 72px 20px; }
+
+      #hero { padding: 100px 20px 72px; }
+
+      .hero-inner {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 40px;
+      }
+
+      .hero-sub { margin: 0 auto 36px; }
+      .hero-buttons { justify-content: center; }
+      .hero-stats { justify-content: center; }
+
+      .mascot-wrap { order: -1; }
+      .mascot-svg { width: 180px; height: auto; }
+
+      .features-grid { grid-template-columns: 1fr; }
+
+      .demo-frame-wrap { display: none; }
+      .demo-mobile-cta { display: block; }
+
+      .footer-inner { flex-direction: column; text-align: center; }
+      .footer-links { justify-content: center; }
+
+      footer { padding: 40px 20px 28px; }
+    }
+
+    @media (max-width: 480px) {
+      .hero-headline { font-size: 3rem; }
+      .btn-primary { padding: 13px 24px; font-size: 0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Nav ── -->
+  <nav id="main-nav">
+    <a href="/" class="nav-logo"><span class="nav-icon">⚒️</span> GOLDY BUILDS</a>
+    <div class="nav-links">
+      <a href="#how-it-works">How it works</a>
+      <a href="#features">Features</a>
+      <a href="#demo">Live demo</a>
+      <a href="/app" class="nav-cta">Start Building →</a>
+    </div>
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#how-it-works" onclick="closeMenu()">How it works</a>
+    <a href="#features" onclick="closeMenu()">Features</a>
+    <a href="#demo" onclick="closeMenu()">Live demo</a>
+    <a href="/app" class="nav-cta" style="text-align:center">Start Building →</a>
+  </div>
+
+  <!-- ── Hero ── -->
+  <section id="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow"></div>
+
+    <div class="particles" id="particles-container"></div>
+
+    <div class="hero-inner">
+      <div class="hero-text">
+        <div class="hero-badge">
+          <div class="dot"></div>
+          Powered by Claude AI
+        </div>
+
+        <h1 class="hero-headline">
+          <span class="gold-text">Your idea.</span><br>
+          Live in 90<br>seconds.
+        </h1>
+
+        <p class="hero-sub">
+          Describe any project in plain English.
+          <strong>Goldy AI writes the code</strong>, creates the GitHub repo,
+          and deploys it to Vercel — all automatically.
+        </p>
+
+        <div class="hero-buttons">
+          <a href="/app" class="btn-primary">⚡ Start Building Free →</a>
+          <a href="#how-it-works" class="btn-ghost">See how it works ↓</a>
+        </div>
+
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-val">&lt;90s</div>
+            <div class="hero-stat-label">Avg deploy time</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div>
+            <div class="hero-stat-val">100%</div>
+            <div class="hero-stat-label">Live Vercel URLs</div>
+          </div>
+          <div style="width:1px;background:var(--border)"></div>
+          <div>
+            <div class="hero-stat-val">3-in-1</div>
+            <div class="hero-stat-label">Build, Import, Deploy</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goldy mascot -->
+      <div class="mascot-wrap">
+        <div class="mascot-shadow"></div>
+        <svg class="mascot-svg" width="300" height="360" viewBox="0 0 300 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+          <!-- Hard hat brim shadow -->
+          <ellipse cx="150" cy="96" rx="68" ry="8" fill="rgba(0,0,0,0.25)"/>
+
+          <!-- Hard hat -->
+          <path d="M90 96 Q90 60 150 56 Q210 60 210 96 Z" fill="#FFD700"/>
+          <path d="M82 96 Q82 92 150 90 Q218 92 218 96 Z" fill="#c9a800"/>
+          <rect x="82" y="94" width="136" height="8" rx="4" fill="#c9a800"/>
+          <!-- Hat stripe -->
+          <rect x="110" y="68" width="80" height="8" rx="3" fill="#ffe066" opacity="0.5"/>
+          <!-- Hat button top -->
+          <circle cx="150" cy="60" r="7" fill="#c9a800"/>
+          <circle cx="150" cy="60" r="4" fill="#FFD700"/>
+
+          <!-- Head -->
+          <ellipse cx="150" cy="126" rx="42" ry="38" fill="#FDBCB4"/>
+
+          <!-- Eyes -->
+          <g class="eye-blink" style="transform-origin:150px 122px">
+            <circle cx="136" cy="120" r="6" fill="white"/>
+            <circle cx="164" cy="120" r="6" fill="white"/>
+            <circle cx="137" cy="121" r="3.5" fill="#2d2d2d"/>
+            <circle cx="165" cy="121" r="3.5" fill="#2d2d2d"/>
+            <!-- eye shine -->
+            <circle cx="138.5" cy="119.5" r="1.5" fill="white"/>
+            <circle cx="166.5" cy="119.5" r="1.5" fill="white"/>
+          </g>
+
+          <!-- Eyebrows -->
+          <path d="M130 112 Q136 108 142 112" stroke="#8B5E3C" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <path d="M158 112 Q164 108 170 112" stroke="#8B5E3C" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+          <!-- Smile -->
+          <path d="M137 135 Q150 147 163 135" stroke="#e07060" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+          <!-- Rosy cheeks -->
+          <circle cx="123" cy="132" r="8" fill="#F4A5A0" opacity="0.45"/>
+          <circle cx="177" cy="132" r="8" fill="#F4A5A0" opacity="0.45"/>
+
+          <!-- Neck -->
+          <rect x="138" y="160" width="24" height="20" rx="4" fill="#FDBCB4"/>
+
+          <!-- Body (overalls) -->
+          <rect x="100" y="175" width="100" height="110" rx="14" fill="#1a56a0"/>
+
+          <!-- Overalls bib -->
+          <rect x="120" y="175" width="60" height="50" rx="8" fill="#2466c0"/>
+
+          <!-- Overall straps -->
+          <rect x="122" y="172" width="16" height="8" rx="4" fill="#2466c0"/>
+          <rect x="162" y="172" width="16" height="8" rx="4" fill="#2466c0"/>
+
+          <!-- Pocket on bib -->
+          <rect x="135" y="188" width="30" height="22" rx="5" fill="#1a56a0"/>
+          <rect x="135" y="188" width="30" height="6" rx="3" fill="#0d3d7a"/>
+          <!-- Pencil in pocket -->
+          <rect x="147" y="186" width="5" height="14" rx="2" fill="#FFD700"/>
+          <polygon points="147,186 152,186 149.5,181" fill="#c9a800"/>
+
+          <!-- Overall buttons -->
+          <circle cx="131" cy="198" r="4" fill="#FFD700"/>
+          <circle cx="169" cy="198" r="4" fill="#FFD700"/>
+
+          <!-- Belt area -->
+          <rect x="100" y="236" width="100" height="8" rx="0" fill="#0d3d7a" opacity="0.4"/>
+
+          <!-- Left arm -->
+          <g class="arm-left">
+            <rect x="72" y="178" width="28" height="72" rx="14" fill="#1a56a0"/>
+            <!-- Left hand -->
+            <ellipse cx="86" cy="256" rx="13" ry="12" fill="#FDBCB4"/>
+            <path d="M78 252 Q86 244 94 252" stroke="#e0a090" stroke-width="1.5" fill="none"/>
+          </g>
+
+          <!-- Right arm + wrench -->
+          <g class="arm-right">
+            <rect x="200" y="178" width="28" height="72" rx="14" fill="#1a56a0"/>
+            <!-- Right hand -->
+            <ellipse cx="214" cy="254" rx="13" ry="12" fill="#FDBCB4"/>
+          </g>
+          <!-- Wrench (separate so it moves with arm) -->
+          <g class="tool">
+            <rect x="210" y="230" width="10" height="52" rx="5" fill="#8B8B8B"/>
+            <!-- Wrench head -->
+            <rect x="203" y="224" width="24" height="18" rx="5" fill="#6B6B6B"/>
+            <rect x="205" y="228" width="10" height="10" rx="2" fill="#404040"/>
+            <!-- Wrench shine -->
+            <rect x="206" y="225" width="4" height="3" rx="1" fill="#aaa" opacity="0.7"/>
+          </g>
+
+          <!-- Legs -->
+          <rect x="110" y="280" width="36" height="68" rx="10" fill="#0d3d7a"/>
+          <rect x="154" y="280" width="36" height="68" rx="10" fill="#0d3d7a"/>
+
+          <!-- Boots -->
+          <path d="M106 340 Q110 356 148 356 Q152 356 152 348 L148 340 Z" fill="#2d2d2d"/>
+          <path d="M150 340 Q154 356 192 356 Q196 356 196 348 L192 340 Z" fill="#2d2d2d"/>
+          <!-- Boot shine -->
+          <path d="M110 347 Q122 344 130 348" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          <path d="M154 347 Q166 344 174 348" stroke="#555" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+          <!-- Shine on hat -->
+          <path d="M118 74 Q128 66 140 70" stroke="rgba(255,255,255,0.45)" stroke-width="3" stroke-linecap="round" fill="none"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── How it works ── -->
+  <section id="how-it-works">
+    <div class="container">
+      <div class="section-center">
+        <div class="section-label reveal">Simple as 1-2-3</div>
+        <h2 class="section-heading gold-text reveal reveal-delay-1">How Goldy Works</h2>
+        <p class="section-sub reveal reveal-delay-2">No setup. No deployment configs. Just describe what you want and Goldy does everything else.</p>
+      </div>
+
+      <div class="steps-row">
+        <div class="step reveal">
+          <div class="step-num">01</div>
+          <div class="step-icon">🧠</div>
+          <div class="step-title">Type Your Idea</div>
+          <p class="step-desc">Describe what you want to build in plain English. A todo app, a landing page, a portfolio, a tool — anything. No technical jargon needed.</p>
+        </div>
+
+        <div class="step-connector reveal reveal-delay-1">
+          <div class="connector-arrow">→</div>
+        </div>
+
+        <div class="step reveal reveal-delay-1">
+          <div class="step-num">02</div>
+          <div class="step-icon">⚙️</div>
+          <div class="step-title">Goldy Builds It</div>
+          <p class="step-desc">Claude AI generates complete, working HTML/CSS/JS code. Goldy creates a GitHub repo and pushes all files automatically.</p>
+        </div>
+
+        <div class="step-connector reveal reveal-delay-2">
+          <div class="connector-arrow">→</div>
+        </div>
+
+        <div class="step reveal reveal-delay-2">
+          <div class="step-num">03</div>
+          <div class="step-icon">🌐</div>
+          <div class="step-title">Get Your Live URL</div>
+          <p class="step-desc">Your project deploys to Vercel in seconds. Get a live public URL instantly. Connect a custom domain with one click.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Features ── -->
+  <section id="features">
+    <div class="container">
+      <div class="section-center">
+        <div class="section-label reveal">Built for builders</div>
+        <h2 class="section-heading gold-text reveal reveal-delay-1">Everything You Need</h2>
+        <p class="section-sub reveal reveal-delay-2">From first idea to live URL — every piece of the pipeline is handled for you.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feat-card reveal">
+          <span class="feat-icon">⚡</span>
+          <div class="feat-title">Build from Idea</div>
+          <p class="feat-desc">Just describe it in plain English. Claude generates complete, production-ready HTML, CSS, and JavaScript with no placeholders.</p>
+        </div>
+
+        <div class="feat-card reveal reveal-delay-1">
+          <span class="feat-icon">📦</span>
+          <div class="feat-title">Import & Rebuild</div>
+          <p class="feat-desc">Upload a ZIP, paste a GitHub URL, or a Replit URL. Goldy analyzes your existing project and rebuilds it as a clean, optimized static app.</p>
+        </div>
+
+        <div class="feat-card reveal reveal-delay-2">
+          <span class="feat-icon">🌐</span>
+          <div class="feat-title">Custom Domains</div>
+          <p class="feat-desc">Connect any domain you own. Get the exact DNS records to add — CNAME or A record — and check propagation right from the dashboard.</p>
+        </div>
+
+        <div class="feat-card reveal reveal-delay-1">
+          <span class="feat-icon">💻</span>
+          <div class="feat-title">GitHub Backup</div>
+          <p class="feat-desc">Every project is automatically pushed to a new GitHub repository under your account. Your code is always yours.</p>
+        </div>
+
+        <div class="feat-card reveal reveal-delay-2">
+          <span class="feat-icon">🚀</span>
+          <div class="feat-title">90-Second Deploy</div>
+          <p class="feat-desc">From idea to live Vercel URL in under 2 minutes. Direct file upload — no build step, no config, no waiting for CI pipelines.</p>
+        </div>
+
+        <div class="feat-card reveal reveal-delay-3">
+          <span class="feat-icon">🔧</span>
+          <div class="feat-title">Any Project Type</div>
+          <p class="feat-desc">Todo apps, portfolios, SaaS landing pages, dashboards, tools, games — if it can run as static HTML/CSS/JS, Goldy can build it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Live Demo ── -->
+  <section id="demo">
+    <div class="container">
+      <div class="section-center">
+        <div class="section-label reveal">Try it yourself</div>
+        <h2 class="section-heading gold-text reveal reveal-delay-1">See It In Action</h2>
+        <p class="section-sub reveal reveal-delay-2">Type any idea below and watch Goldy generate code, create a GitHub repo, and deploy to Vercel in real time.</p>
+      </div>
+
+      <!-- Desktop iframe -->
+      <div class="demo-frame-wrap reveal">
+        <div class="demo-bar">
+          <div class="demo-dot" style="background:#f85149"></div>
+          <div class="demo-dot" style="background:#f0883e"></div>
+          <div class="demo-dot" style="background:#3fb950"></div>
+          <div class="demo-url-bar">goldybuilds.app/app</div>
+        </div>
+        <iframe
+          class="demo-iframe"
+          src="/app"
+          title="Goldy Builds App"
+          loading="lazy"
+          sandbox="allow-scripts allow-same-origin allow-forms"
+        ></iframe>
+      </div>
+
+      <!-- Mobile fallback -->
+      <div class="demo-mobile-cta">
+        <p>Open the builder and try it yourself — describe any project and get a live URL in seconds.</p>
+        <a href="/app" class="btn-primary">⚡ Open Goldy Builder →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <div class="footer-inner">
+      <a href="/" class="footer-logo">⚒️ GOLDY BUILDS</a>
+      <div class="footer-credit">Built by Goldy &amp; Crew &nbsp;⚒️</div>
+      <div class="footer-links">
+        <a href="/app">Builder App</a>
+        <a href="#how-it-works">How it works</a>
+        <a href="#features">Features</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ── Nav scroll effect ──────────────────────────────────────────────────
+    const nav = document.getElementById('main-nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 20);
+    }, { passive: true });
+
+    // ── Mobile menu ────────────────────────────────────────────────────────
+    function toggleMenu() {
+      document.getElementById('mobile-menu').classList.toggle('open');
+    }
+    function closeMenu() {
+      document.getElementById('mobile-menu').classList.remove('open');
+    }
+
+    // ── Floating particles ─────────────────────────────────────────────────
+    const container = document.getElementById('particles-container');
+    for (let i = 0; i < 22; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `
+        left: ${Math.random() * 100}%;
+        bottom: ${Math.random() * 40}%;
+        width: ${2 + Math.random() * 4}px;
+        height: ${2 + Math.random() * 4}px;
+        animation-duration: ${4 + Math.random() * 6}s;
+        animation-delay: ${Math.random() * 6}s;
+        opacity: 0;
+      `;
+      container.appendChild(p);
+    }
+
+    // ── Scroll reveal ──────────────────────────────────────────────────────
+    const revealEls = document.querySelectorAll('.reveal');
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+    revealEls.forEach(el => observer.observe(el));
+
+    // Hero text is visible immediately (above the fold)
+    document.querySelectorAll('#hero .reveal').forEach(el => el.classList.add('visible'));
+  </script>
+</body>
+</html>
