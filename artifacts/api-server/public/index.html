@@ -1153,7 +1153,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
         res = await fetch(`${API}/import`, {
           method: 'POST',
           headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({ url: urlVal }),
+          body: JSON.stringify({ url: urlVal, mode: importMode }),
         });
       }
 
