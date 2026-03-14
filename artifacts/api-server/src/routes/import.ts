@@ -88,16 +88,26 @@ async function fetchGitHubZip(url: string): Promise<Buffer> {
 
   log(`▶ Petya is fetching files from ${user}/${repo}...`, "info");
 
-  const headers: Record<string, string> = {
+  const zipUrl = `https://api.github.com/repos/${user}/${repo}/zipball/HEAD`;
+
+  const authedHeaders: Record<string, string> = {
     "User-Agent": "Goldy-Builder/1.0",
     Accept: "application/vnd.github+json",
   };
-  if (token) headers["Authorization"] = `token ${token}`;
+  if (token) authedHeaders["Authorization"] = `token ${token}`;
 
-  const res = await fetch(
-    `https://api.github.com/repos/${user}/${repo}/zipball/HEAD`,
-    { headers }
-  );
+  let res = await fetch(zipUrl, { headers: authedHeaders });
+
+  // Fine-grained PATs can't access third-party public repos — retry without auth
+  if (res.status === 404 && token) {
+    log(`  Token rejected (404) — retrying as public repo...`, "info");
+    res = await fetch(zipUrl, {
+      headers: {
+        "User-Agent": "Goldy-Builder/1.0",
+        Accept: "application/vnd.github+json",
+      },
+    });
+  }
 
   if (!res.ok) {
     const err = await res.text();
