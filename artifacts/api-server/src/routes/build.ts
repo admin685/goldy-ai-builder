@@ -240,7 +240,7 @@ export interface StageData {
   features: string[];
   repoUrl: string;
   deployUrl: string;
-  projectId: string;
+  vercelProjectId: string;
   deploymentName: string;
 }
 
@@ -260,7 +260,8 @@ export interface BuildState {
     repoUrl?: string;
     projectName?: string;
     filesCreated?: number;
-    projectId?: string;
+    projectId?: number;
+    vercelProjectId?: string;
     deploymentName?: string;
   };
   error?: string;
@@ -991,7 +992,7 @@ async function handleDeploy(): Promise<void> {
       projectId = vercelResult.projectId;
       deploymentName = vercelResult.deploymentName;
       state.stageData.deployUrl = deployUrl;
-      state.stageData.projectId = projectId;
+      state.stageData.vercelProjectId = projectId;
       state.stageData.deploymentName = deploymentName;
     } catch (e) {
       log(`Vasya couldn't deliver: ${(e as Error).message}`, "error");
@@ -1056,26 +1057,30 @@ async function runBuild(idea: string) {
 
     state.status = "done";
     state.stage = "done";
-    state.result = {
-      url: deployUrl || repoUrl || undefined,
-      repoUrl: repoUrl || undefined,
-      projectName,
-      filesCreated: Object.keys(files).length,
-      projectId: state.stageData.projectId ?? undefined,
-      deploymentName: state.stageData.deploymentName ?? undefined,
-    };
 
-    log(`✓ Crew knocked it out! ${Object.keys(files).length} files built.`, "success");
-
+    let dbProjectId: number | undefined;
     if (state.userId) {
-      await saveProject({
+      const id = await saveProject({
         userId: state.userId,
         name: projectName,
         vercelUrl: deployUrl || undefined,
         githubUrl: repoUrl || undefined,
         files,
       });
+      if (id) dbProjectId = id;
     }
+
+    state.result = {
+      url: deployUrl || repoUrl || undefined,
+      repoUrl: repoUrl || undefined,
+      projectName,
+      filesCreated: Object.keys(files).length,
+      projectId: dbProjectId,
+      vercelProjectId: state.stageData.vercelProjectId ?? undefined,
+      deploymentName: state.stageData.deploymentName ?? undefined,
+    };
+
+    log(`✓ Crew knocked it out! ${Object.keys(files).length} files built.`, "success");
   } catch (err) {
     state.status = "error";
     state.stage = "error";
@@ -1214,8 +1219,8 @@ router.post("/domain", async (req, res) => {
     return;
   }
 
-  const projectId = state.result.projectId;
-  if (!projectId) {
+  const vercelPid = state.result.vercelProjectId;
+  if (!vercelPid) {
     res.status(400).json({ error: "No active deployment found. Build a project first." });
     return;
   }
@@ -1224,7 +1229,7 @@ router.post("/domain", async (req, res) => {
 
   try {
     const addRes = await fetch(
-      `https://api.vercel.com/v9/projects/${projectId}/domains`,
+      `https://api.vercel.com/v9/projects/${vercelPid}/domains`,
       {
         method: "POST",
         headers: {
@@ -1249,7 +1254,7 @@ router.post("/domain", async (req, res) => {
     }
 
     const checkRes = await fetch(
-      `https://api.vercel.com/v9/projects/${projectId}/domains/${cleanDomain}`,
+      `https://api.vercel.com/v9/projects/${vercelPid}/domains/${cleanDomain}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }
@@ -1302,7 +1307,7 @@ router.post("/domain", async (req, res) => {
       domain: cleanDomain,
       verified: checkData.verified ?? false,
       records,
-      projectId,
+      vercelProjectId: vercelPid,
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
@@ -1323,15 +1328,15 @@ router.get("/domain/check", async (req, res) => {
     return;
   }
 
-  const projectId = state.result.projectId;
-  if (!projectId) {
+  const vercelPid = state.result.vercelProjectId;
+  if (!vercelPid) {
     res.status(400).json({ error: "No active deployment found" });
     return;
   }
 
   try {
     const checkRes = await fetch(
-      `https://api.vercel.com/v9/projects/${projectId}/domains/${domain}`,
+      `https://api.vercel.com/v9/projects/${vercelPid}/domains/${domain}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }

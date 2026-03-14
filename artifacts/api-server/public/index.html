@@ -1344,9 +1344,12 @@ textarea#idea::placeholder { color: var(--text-muted); }
       statsEl.innerHTML += `<div class="stat"><div class="stat-label">Files</div><div class="stat-value">${result.filesCreated}</div></div>`;
     }
 
+    if (result.vercelProjectId) {
+      document.getElementById('domain-section').style.display = 'block';
+    }
+
     if (result.projectId) {
       currentProjectId = result.projectId;
-      document.getElementById('domain-section').style.display = 'block';
       const fbRow = document.getElementById('feedback-row');
       fbRow.style.display = 'block';
       document.getElementById('fb-good').disabled = false;

@@ -6,11 +6,11 @@ export async function saveProject(opts: {
   vercelUrl?: string;
   githubUrl?: string;
   files?: Record<string, string>;
-}): Promise<void> {
+}): Promise<number | null> {
   try {
-    await queryOne(
+    const row = await queryOne<{ id: number }>(
       `INSERT INTO projects (user_id, name, vercel_url, github_url, files_json)
-       VALUES ($1, $2, $3, $4, $5)`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
       [
         opts.userId,
         opts.name,
@@ -19,7 +19,9 @@ export async function saveProject(opts: {
         opts.files ? JSON.stringify(opts.files) : null,
       ]
     );
+    return row?.id ?? null;
   } catch (e) {
     console.error("[projects] Failed to save project:", e);
+    return null;
   }
 }
