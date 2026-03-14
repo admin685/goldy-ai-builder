@@ -66,17 +66,30 @@ Express 5 API server serving both the Goldy Builds chat UI and the builder backe
 - Depends on: `@workspace/db`, `@workspace/api-zod`, `@anthropic-ai/sdk`, `adm-zip`, `multer`
 
 **Required environment variables:**
-- `ANTHROPIC_API_KEY` — Claude API key for code generation
+- `ANTHROPIC_API_KEY` — Claude API key for code generation + assembly
 - `GITHUB_TOKEN` — GitHub personal access token (scopes: `repo`) for creating repos
 - `VERCEL_TOKEN` — Vercel API token for deployment
+- `OPENAI_API_KEY` — GPT-4o for premium CSS generation in the multi-AI design pipeline
+- `REPLICATE_API_TOKEN` — FLUX Schnell via Replicate for hero image generation
+- `RECRAFT_API_KEY` — Recraft v3 for SVG logo generation
 - `SECRET_CALLBACK_TOKEN` — optional token to secure the `/callback` endpoint
 
+**Multi-AI Design Pipeline (runs inside every build):**
+All 3 calls run in parallel via `Promise.all()` before Claude assembles the final code:
+1. **GPT-4o** (`OPENAI_API_KEY`) — generates premium CSS styling (design system, color palette, animations)
+2. **FLUX Schnell** (`REPLICATE_API_TOKEN`) — generates a cinematic 16:9 hero background image via Replicate
+3. **Recraft v3** (`RECRAFT_API_KEY`) — generates a vector logo image URL
+Claude then receives all three assets as context and assembles them into the final `index.html`.
+Each AI call fails gracefully (warn log, non-fatal) if its key is missing.
+
 **Build flow (Build New):**
-1. `POST /api/build` — accepts `{idea}`, calls Claude to generate complete project spec + code
-2. Claude returns JSON with `project_name`, `files`, `tech_stack`, `features`
-3. GitHub API creates a repo and pushes all generated files
-4. Vercel API deploys (direct file upload, SSO protection disabled)
-5. `GET /api/status` — returns build state, live logs, and final URL when done
+1. `POST /api/build` — accepts `{idea}`
+2. Quick Claude call (~300 tokens) to get `project_name` + `description` for the design pipeline
+3. `Promise.all()` fires GPT-4o CSS + FLUX image + Recraft logo simultaneously
+4. Full Claude call assembles complete project code with all design assets injected
+5. GitHub API creates a repo and pushes all generated files
+6. Vercel API deploys (direct file upload, SSO protection disabled)
+7. `GET /api/status` — returns build state, live logs, and final URL when done
 
 **Import & Rebuild flow:**
 1. `POST /api/import` — three modes:
