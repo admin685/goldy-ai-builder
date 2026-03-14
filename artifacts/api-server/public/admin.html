@@ -303,19 +303,20 @@ function getProjectStatus(p) {
 }
 
 async function renderOverview(mc) {
-  const deployed = allProjects.filter(p => p.vercel_url).length;
-  const successRate = allProjects.length ? Math.round((deployed / allProjects.length) * 100) : 0;
-
+  let stats = { users: 0, projects: 0, deployed: 0, successRate: 0, estimatedCost: '0' };
   let chartData = [];
-  try { chartData = await fetchJSON(`${API}/admin/builds-chart`) || []; } catch {}
+  try { [stats, chartData] = await Promise.all([
+    fetchJSON(`${API}/admin/stats`).then(r => r || stats),
+    fetchJSON(`${API}/admin/builds-chart`).then(r => r || []),
+  ]); } catch {}
 
   mc.innerHTML = `
     <h1 class="section-title">Overview</h1>
     <div class="stat-grid">
-      <div class="stat-card"><div class="stat-num">${allUsers.length}</div><div class="stat-label">Total Users</div></div>
-      <div class="stat-card"><div class="stat-num">${allProjects.length}</div><div class="stat-label">Total Projects</div></div>
-      <div class="stat-card"><div class="stat-num">${successRate}%</div><div class="stat-label">Success Rate</div></div>
-      <div class="stat-card"><div class="stat-num">$${(allProjects.length * 0.12).toFixed(0)}</div><div class="stat-label">Est. Total Cost</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.users}</div><div class="stat-label">Total Users</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.projects}</div><div class="stat-label">Total Projects</div></div>
+      <div class="stat-card"><div class="stat-num">${stats.successRate}%</div><div class="stat-label">Success Rate</div></div>
+      <div class="stat-card"><div class="stat-num">$${stats.estimatedCost}</div><div class="stat-label">Est. Total Cost</div></div>
     </div>
     <div class="two-col">
       <div class="card">
@@ -445,9 +446,10 @@ function renderProjects(mc) {
   mc.innerHTML = `
     <h1 class="section-title">Projects</h1>
     <div class="filter-row" id="project-filters">
-      <button class="filter-btn active" onclick="setProjectFilter('all')">All</button>
-      <button class="filter-btn" onclick="setProjectFilter('done')">Deployed</button>
-      <button class="filter-btn" onclick="setProjectFilter('building')">Building</button>
+      <button class="filter-btn active" data-f="all" onclick="setProjectFilter('all')">All</button>
+      <button class="filter-btn" data-f="done" onclick="setProjectFilter('done')">Deployed</button>
+      <button class="filter-btn" data-f="building" onclick="setProjectFilter('building')">Building</button>
+      <button class="filter-btn" data-f="error" onclick="setProjectFilter('error')">Error</button>
     </div>
     <div id="projects-table"></div>`;
   projectFilter = 'all';
@@ -456,8 +458,13 @@ function renderProjects(mc) {
 
 function setProjectFilter(f) {
   projectFilter = f;
-  document.querySelectorAll('#project-filters .filter-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(f === 'all' ? 'all' : f)));
+  document.querySelectorAll('#project-filters .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.f === f));
   renderProjectsTable();
+}
+
+function getFileCount(p) {
+  if (!p.files_json) return 0;
+  try { return Object.keys(JSON.parse(p.files_json)).length; } catch { return 0; }
 }
 
 function renderProjectsTable() {
@@ -466,15 +473,17 @@ function renderProjectsTable() {
 
   document.getElementById('projects-table').innerHTML = `
     <table>
-      <thead><tr><th>Name</th><th>Owner</th><th>URL</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead><tr><th>Name</th><th>Owner</th><th>Files</th><th>URL</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
       <tbody>${filtered.map(p => `
         <tr>
           <td title="${esc(p.name)}">${esc(p.name)}</td>
           <td>${esc(p.user_email)}</td>
+          <td>${getFileCount(p)}</td>
           <td>${p.vercel_url ? `<a href="${esc(p.vercel_url)}" target="_blank">View ↗</a>` : '—'}</td>
           <td><span class="status-badge ${getProjectStatus(p)}">${getProjectStatus(p)}</span></td>
           <td>${fmt(p.created_at)}</td>
           <td class="action-btns">
+            ${p.vercel_url ? `<a href="${esc(p.vercel_url)}" target="_blank" class="btn btn-ghost btn-sm">Open ↗</a>` : ''}
             <a href="/editor?id=${p.id}" class="btn btn-ghost btn-sm">Edit</a>
             <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">Delete</button>
           </td>
@@ -496,13 +505,14 @@ function renderDeployments(mc) {
     <h1 class="section-title">Deployments</h1>
     <div class="card">
       <table>
-        <thead><tr><th>Project</th><th>Owner</th><th>Live URL</th><th>GitHub</th><th>Deployed</th></tr></thead>
+        <thead><tr><th>Project</th><th>Owner</th><th>Status</th><th>Live URL</th><th>GitHub</th><th>Deployed</th></tr></thead>
         <tbody>${deployed.map(p => `
           <tr>
             <td>${esc(p.name)}</td>
             <td>${esc(p.user_email)}</td>
+            <td><span class="status-badge done">Live</span></td>
             <td><a href="${esc(p.vercel_url)}" target="_blank">${esc(p.vercel_url.replace('https://',''))}</a></td>
-            <td>${p.github_url ? `<a href="${esc(p.github_url)}" target="_blank">Repo</a>` : '—'}</td>
+            <td>${p.github_url ? `<a href="${esc(p.github_url)}" target="_blank">Repo ↗</a>` : '—'}</td>
             <td>${fmt(p.created_at)}</td>
           </tr>`).join('')}
         </tbody>
@@ -572,13 +582,16 @@ function renderDomains(mc) {
     <h1 class="section-title">Domains</h1>
     <div class="card">
       <table>
-        <thead><tr><th>Project</th><th>Domain</th><th>Owner</th></tr></thead>
-        <tbody>${withDomain.length ? withDomain.map(p => `
-          <tr>
+        <thead><tr><th>Project</th><th>Domain</th><th>Owner</th><th>DNS</th></tr></thead>
+        <tbody>${withDomain.length ? withDomain.map(p => {
+          const domain = p.vercel_url.replace('https://','').replace(/\/$/,'');
+          return `<tr>
             <td>${esc(p.name)}</td>
-            <td><a href="${esc(p.vercel_url)}" target="_blank">${esc(p.vercel_url.replace('https://',''))}</a></td>
+            <td><a href="${esc(p.vercel_url)}" target="_blank">${esc(domain)}</a></td>
             <td>${esc(p.user_email)}</td>
-          </tr>`).join('') : '<tr><td colspan="3" style="color:var(--text-muted)">No custom domains yet</td></tr>'}
+            <td><a href="https://dnschecker.org/#A/${esc(domain)}" target="_blank" class="btn btn-ghost btn-sm">Check DNS ↗</a></td>
+          </tr>`;
+        }).join('') : '<tr><td colspan="4" style="color:var(--text-muted)">No custom domains yet</td></tr>'}
         </tbody>
       </table>
     </div>`;

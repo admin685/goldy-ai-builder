@@ -111,7 +111,7 @@ router.get("/auth/admin/projects", requireAuth, async (req, res) => {
   if (req.user!.role !== "admin") { res.status(403).json({ error: "Forbidden" }); return; }
   try {
     const projects = await query(
-      `SELECT p.id, p.name, p.vercel_url, p.github_url, p.created_at, u.email as user_email
+      `SELECT p.id, p.name, p.vercel_url, p.github_url, p.files_json, p.created_at, u.email as user_email
        FROM projects p JOIN users u ON p.user_id = u.id
        ORDER BY p.created_at DESC`
     );

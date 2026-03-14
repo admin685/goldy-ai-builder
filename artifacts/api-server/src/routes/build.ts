@@ -3,8 +3,21 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createHash } from "crypto";
 import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import { saveProject } from "../lib/projects.js";
+import { queryOne } from "../lib/db.js";
 
 const router: IRouter = Router();
+
+async function getPrompt(member: string, fallback: string): Promise<string> {
+  try {
+    const row = await queryOne<{ prompt: string }>(
+      "SELECT prompt FROM system_prompts WHERE member = $1",
+      [member]
+    );
+    return (row?.prompt && row.prompt.trim()) ? row.prompt : fallback;
+  } catch {
+    return fallback;
+  }
+}
 
 // ── Multi-AI Design Pipeline ───────────────────────────────────────────────
 
@@ -35,7 +48,7 @@ async function generateCSSWithGPT(idea: string, projectName: string): Promise<st
       messages: [
         {
           role: "system",
-          content: `You are a world-class CSS designer. Generate premium, production-ready CSS for a web project. 
+          content: await getPrompt("Boris", `You are a world-class CSS designer. Generate premium, production-ready CSS for a web project. 
 Output ONLY raw CSS — no markdown, no explanation, no backticks. 
 Use CSS custom properties (variables). Create a cohesive design system with:
 - A distinctive color palette (dark theme, rich accent colors matching the project's purpose)
@@ -45,7 +58,7 @@ Use CSS custom properties (variables). Create a cohesive design system with:
 - A .hero section with a large background image via var(--hero-bg)
 - A .navbar with logo area
 - Responsive layout utilities
-- Subtle animations with @keyframes`,
+- Subtle animations with @keyframes`),
         },
         {
           role: "user",
@@ -574,14 +587,15 @@ async function getTaskPlanFromClaude(idea: string): Promise<TaskSpec[]> {
 
   const client = new Anthropic({ apiKey });
   try {
-    const res = await client.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 400,
-      system: `You are a build orchestrator. Output ONLY a JSON array of task steps to build a web project.
+    const goldyPrompt = await getPrompt("Goldy", `You are a build orchestrator. Output ONLY a JSON array of task steps to build a web project.
 Each item: {"id": number, "agent": string, "task": string}
 Agents available: "claude" (analyze/code), "gpt4o" (css), "recraft" (logo), "flux" (image), "deploy" (github+vercel).
 Standard plan: [{"id":1,"agent":"claude","task":"analyze"},{"id":2,"agent":"gpt4o","task":"css"},{"id":3,"agent":"recraft","task":"logo"},{"id":4,"agent":"flux","task":"image"},{"id":5,"agent":"claude","task":"code"},{"id":6,"agent":"deploy","task":"github+vercel"}]
-Output ONLY the JSON array. No explanation.`,
+Output ONLY the JSON array. No explanation.`);
+    const res = await client.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 400,
+      system: goldyPrompt,
       messages: [{ role: "user", content: `Project idea: ${idea}` }],
     });
     const text = res.content[0].type === "text" ? res.content[0].text : "";
@@ -606,14 +620,15 @@ async function handleAnalyze(idea: string): Promise<void> {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
   const client = new Anthropic({ apiKey });
-  const res = await client.messages.create({
-    model: "claude-opus-4-5",
-    max_tokens: 600,
-    system: `Return ONLY a JSON object with exactly three fields:
+  const analyzePrompt = await getPrompt("Goldy", `Return ONLY a JSON object with exactly three fields:
 - project_name: kebab-case string
 - description: one sentence string
 - files_to_generate: array of filenames — always split into index.html, style.css, script.js plus any extra HTML pages needed (e.g. about.html, menu.html, contact.html). Always include README.md. Example: ["index.html","style.css","script.js","about.html","contact.html","README.md"]
-No markdown, no explanation.`,
+No markdown, no explanation.`);
+  const res = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 600,
+    system: analyzePrompt,
     messages: [{ role: "user", content: idea }],
   });
 
@@ -648,14 +663,14 @@ async function handleGpt4oCSS(idea: string): Promise<void> {
         messages: [
           {
             role: "system",
-            content: `You are a CSS designer. Output ONLY raw CSS — no markdown, no explanation, no backticks.
+            content: await getPrompt("Boris", `You are a CSS designer. Output ONLY raw CSS — no markdown, no explanation, no backticks.
 Max 1500 tokens. Create a concise design system with:
 - CSS custom properties (:root vars) for colors, fonts, spacing
 - @import for Google Fonts (one font pairing)
 - .navbar, .hero, .btn-primary, .btn-secondary, .card, .footer styles
 - Dark theme, rich accent color matching the project purpose
 - Smooth hover transitions
-- A .hero class with background: var(--hero-bg) support`,
+- A .hero class with background: var(--hero-bg) support`),
           },
           {
             role: "user",
@@ -808,8 +823,8 @@ Return ONLY the HTML. No markdown fences.`;
     fileInstructions = `Generate the complete content for "${filename}". Return ONLY the file content. No markdown fences.`;
   }
 
-  const system = `You are a senior web developer generating "${filename}" for a website project.
-Return ONLY the raw file content — no explanation, no markdown fences, no preamble.`;
+  const system = await getPrompt("Goldy", `You are a senior web developer generating "${filename}" for a website project.
+Return ONLY the raw file content — no explanation, no markdown fences, no preamble.`);
 
   const user = `Project: "${projectName}"
 Description: ${description}

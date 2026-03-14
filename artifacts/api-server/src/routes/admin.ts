@@ -4,6 +4,32 @@ import { query, queryOne } from "../lib/db.js";
 
 const router = Router();
 
+router.get("/admin/stats", requireAdmin, async (_req, res) => {
+  try {
+    const userCount = await queryOne<{ count: string }>("SELECT COUNT(*)::text AS count FROM users");
+    const projCount = await queryOne<{ count: string }>("SELECT COUNT(*)::text AS count FROM projects");
+    const deployedCount = await queryOne<{ count: string }>("SELECT COUNT(*)::text AS count FROM projects WHERE vercel_url IS NOT NULL");
+    const monthCount = await queryOne<{ count: string }>(
+      "SELECT COUNT(*)::text AS count FROM projects WHERE created_at >= NOW() - INTERVAL '30 days'"
+    );
+    const total = Number(projCount?.count ?? 0);
+    const deployed = Number(deployedCount?.count ?? 0);
+    const monthly = Number(monthCount?.count ?? 0);
+    const costPerBuild = 0.12;
+    res.json({
+      users: Number(userCount?.count ?? 0),
+      projects: total,
+      deployed,
+      successRate: total ? Math.round((deployed / total) * 100) : 0,
+      monthlyBuilds: monthly,
+      estimatedCost: (total * costPerBuild).toFixed(0),
+      estimatedMonthlyCost: (monthly * costPerBuild).toFixed(2),
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load stats" });
+  }
+});
+
 router.get("/admin/builds-chart", requireAdmin, async (_req, res) => {
   try {
     const rows = await query<{ day: string; count: string }>(
