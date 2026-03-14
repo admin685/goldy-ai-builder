@@ -64,6 +64,41 @@
 
     .subtitle { color: var(--text-muted); font-size: 1.05rem; }
 
+    /* ── Tab switcher ── */
+    .tab-bar {
+      display: flex;
+      gap: 4px;
+      width: 100%;
+      max-width: 760px;
+      margin-bottom: 12px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 5px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      background: var(--bg3);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .tab-btn:hover:not(.active) { color: var(--text); }
+
     /* ── Card ── */
     .card {
       width: 100%;
@@ -160,6 +195,101 @@
     }
 
     .example-chip:hover { border-color: var(--gold); color: var(--gold); }
+
+    /* ── Import tab ── */
+    .import-panel { display: none; }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg3);
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+      font-family: inherit;
+      text-align: center;
+    }
+
+    .mode-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(245, 197, 24, 0.06);
+    }
+
+    .mode-btn:hover:not(.active) { border-color: var(--text-muted); color: var(--text); }
+
+    /* ── Drop zone ── */
+    .drop-zone {
+      width: 100%;
+      min-height: 160px;
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      padding: 24px;
+      position: relative;
+    }
+
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--gold);
+      background: rgba(245, 197, 24, 0.04);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon { font-size: 2.4rem; }
+    .drop-label { color: var(--text-muted); font-size: 0.9rem; text-align: center; }
+    .drop-label strong { color: var(--gold); }
+    .drop-hint { color: var(--text-muted); font-size: 0.78rem; }
+    .drop-selected { color: var(--green); font-size: 0.9rem; font-weight: 600; }
+
+    /* ── URL input ── */
+    .url-input-wrap { display: none; }
+
+    .url-input {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      padding: 14px 16px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 0;
+    }
+
+    .url-input:focus { border-color: var(--gold); }
+    .url-input::placeholder { color: var(--text-muted); }
+
+    .url-hint {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
 
     /* ── Status section ── */
     #status-section { display: none; }
@@ -323,7 +453,7 @@
 
     .btn-reset:hover { border-color: var(--gold); color: var(--gold); }
 
-    /* ── Task 4: Domain section ── */
+    /* ── Domain section ── */
     .domain-section {
       display: none;
       margin-top: 28px;
@@ -499,23 +629,97 @@
     <div class="subtitle">Describe your project. We build it.</div>
   </div>
 
+  <!-- Tab switcher -->
+  <div class="tab-bar" id="tab-bar">
+    <button class="tab-btn active" id="tab-build" onclick="switchTab('build')">⚡ Build New Project</button>
+    <button class="tab-btn" id="tab-import" onclick="switchTab('import')">📦 Import & Rebuild</button>
+  </div>
+
   <!-- Input card -->
   <div class="card" id="input-card">
-    <textarea
-      id="idea"
-      placeholder="What do you want to build today?&#10;&#10;Example: A todo app with a dark theme, local storage, and priority tags"
-    ></textarea>
 
-    <button class="btn-build" id="build-btn" onclick="startBuild()">
-      Build It →
-    </button>
+    <!-- Build New panel -->
+    <div id="build-panel">
+      <textarea
+        id="idea"
+        placeholder="What do you want to build today?&#10;&#10;Example: A todo app with a dark theme, local storage, and priority tags"
+      ></textarea>
 
-    <div class="examples">
-      <span class="example-chip" onclick="fillExample(this)">Todo list web app with dark theme</span>
-      <span class="example-chip" onclick="fillExample(this)">Landing page for a SaaS product</span>
-      <span class="example-chip" onclick="fillExample(this)">Personal portfolio with animations</span>
-      <span class="example-chip" onclick="fillExample(this)">Expense tracker with charts</span>
-      <span class="example-chip" onclick="fillExample(this)">Pomodoro timer app</span>
+      <button class="btn-build" id="build-btn" onclick="startBuild()">
+        Build It →
+      </button>
+
+      <div class="examples">
+        <span class="example-chip" onclick="fillExample(this)">Todo list web app with dark theme</span>
+        <span class="example-chip" onclick="fillExample(this)">Landing page for a SaaS product</span>
+        <span class="example-chip" onclick="fillExample(this)">Personal portfolio with animations</span>
+        <span class="example-chip" onclick="fillExample(this)">Expense tracker with charts</span>
+        <span class="example-chip" onclick="fillExample(this)">Pomodoro timer app</span>
+      </div>
+    </div>
+
+    <!-- Import & Rebuild panel -->
+    <div class="import-panel" id="import-panel">
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Import source</div>
+        <div class="mode-selector">
+          <button class="mode-btn active" id="mode-zip" onclick="setMode('zip')">📁 ZIP Upload</button>
+          <button class="mode-btn" id="mode-github" onclick="setMode('github')">🐙 GitHub URL</button>
+          <button class="mode-btn" id="mode-replit" onclick="setMode('replit')">🔵 Replit URL</button>
+        </div>
+      </div>
+
+      <!-- ZIP drop zone -->
+      <div id="zip-area">
+        <div
+          class="drop-zone"
+          id="drop-zone"
+          ondragover="onDragOver(event)"
+          ondragleave="onDragLeave(event)"
+          ondrop="onDrop(event)"
+        >
+          <input type="file" id="zip-file" accept=".zip" onchange="onFileSelect(event)" />
+          <div class="drop-icon">📦</div>
+          <div class="drop-label">
+            <strong>Click to choose</strong> or drag & drop your ZIP
+          </div>
+          <div class="drop-hint">Supports any project: React, Vue, Flask, plain HTML, etc.</div>
+          <div class="drop-selected" id="drop-selected" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- GitHub URL -->
+      <div class="url-input-wrap" id="github-area">
+        <input
+          type="text"
+          class="url-input"
+          id="github-url"
+          placeholder="https://github.com/username/repository"
+          onkeydown="if(event.key==='Enter') startImport()"
+        />
+        <div class="url-hint">Paste any public GitHub repository URL. Private repos work too if your GitHub token has access.</div>
+      </div>
+
+      <!-- Replit URL -->
+      <div class="url-input-wrap" id="replit-area">
+        <input
+          type="text"
+          class="url-input"
+          id="replit-url"
+          placeholder="https://replit.com/@username/project-name"
+          onkeydown="if(event.key==='Enter') startImport()"
+        />
+        <div class="url-hint">Paste a public Replit project URL. The project must be public for ZIP export to work.</div>
+      </div>
+
+      <button class="btn-build" id="import-btn" onclick="startImport()" style="margin-top:20px">
+        Import & Rebuild →
+      </button>
+
+      <div style="margin-top:14px;padding:12px 16px;background:rgba(245,197,24,0.05);border:1px solid rgba(245,197,24,0.15);border-radius:8px;font-size:0.82rem;color:var(--text-muted)">
+        <strong style="color:var(--gold)">How it works:</strong> Goldy reads all your source files, sends them to Claude with the instruction to analyze and rebuild the project as a clean static web app, then deploys it to Vercel automatically.
+      </div>
     </div>
   </div>
 
@@ -543,7 +747,7 @@
       <div class="result-links" id="result-links"></div>
       <div class="stats-row" id="stats-row"></div>
 
-      <!-- Task 4: Domain connection section -->
+      <!-- Domain connection section -->
       <div class="domain-section" id="domain-section">
         <h4>Connect a Custom Domain</h4>
         <p>Enter your domain name to get the DNS records you need to add. Your domain will point to this deployment on Vercel.</p>
@@ -594,6 +798,69 @@
     let particles    = [];
     let bots         = [];
     let activeDomain = '';
+    let selectedFile  = null;
+    let activeTab    = 'build';
+    let importMode   = 'zip';
+
+    // ── Tab switcher ──────────────────────────────────────────────────────
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById('tab-build').classList.toggle('active', tab === 'build');
+      document.getElementById('tab-import').classList.toggle('active', tab === 'import');
+      document.getElementById('build-panel').style.display  = tab === 'build'  ? 'block' : 'none';
+      document.getElementById('import-panel').style.display = tab === 'import' ? 'block' : 'none';
+    }
+
+    // ── Import mode selector ──────────────────────────────────────────────
+    function setMode(mode) {
+      importMode = mode;
+      ['zip','github','replit'].forEach(m => {
+        document.getElementById('mode-' + m).classList.toggle('active', m === mode);
+        const area = document.getElementById(m + '-area');
+        if (area) area.style.display = m === mode ? 'block' : 'none';
+      });
+      // url-input-wrap visibility
+      document.getElementById('github-area').style.display = mode === 'github' ? 'block' : 'none';
+      document.getElementById('replit-area').style.display = mode === 'replit' ? 'block' : 'none';
+      document.getElementById('zip-area').style.display    = mode === 'zip'    ? 'block' : 'none';
+    }
+
+    // ── Drop zone ─────────────────────────────────────────────────────────
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.add('drag-over');
+    }
+
+    function onDragLeave(e) {
+      document.getElementById('drop-zone').classList.remove('drag-over');
+    }
+
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById('drop-zone').classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith('.zip')) {
+        selectedFile = file;
+        showFileSelected(file.name);
+      } else {
+        alert('Please drop a .zip file');
+      }
+    }
+
+    function onFileSelect(e) {
+      const file = e.target.files[0];
+      if (file) {
+        selectedFile = file;
+        showFileSelected(file.name);
+      }
+    }
+
+    function showFileSelected(name) {
+      const sel = document.getElementById('drop-selected');
+      sel.textContent = '✓ ' + name;
+      sel.style.display = 'block';
+      document.querySelector('.drop-icon').textContent = '✅';
+    }
 
     // ── Canvas animation ─────────────────────────────────────────────────
     const canvas = document.getElementById('goldy-canvas');
@@ -712,6 +979,20 @@
       if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     }
 
+    // ── Shared: show status section ───────────────────────────────────────
+    function showStatusSection() {
+      document.getElementById('tab-bar').style.display         = 'none';
+      document.getElementById('input-card').style.display      = 'none';
+      document.getElementById('status-section').style.display  = 'block';
+      document.getElementById('result-card').style.display     = 'none';
+      document.getElementById('domain-section').style.display  = 'none';
+      document.getElementById('dns-panel').style.display       = 'none';
+      document.getElementById('log-panel').innerHTML            = '';
+      lastLogCount  = 0;
+      activeDomain  = '';
+      startAnimation();
+    }
+
     // ── Build flow ────────────────────────────────────────────────────────
     function fillExample(el) { document.getElementById('idea').value = el.textContent; }
 
@@ -719,16 +1000,7 @@
       const idea = document.getElementById('idea').value.trim();
       if (!idea) { alert('Please describe your project first!'); return; }
 
-      document.getElementById('input-card').style.display  = 'none';
-      document.getElementById('status-section').style.display = 'block';
-      document.getElementById('result-card').style.display = 'none';
-      document.getElementById('domain-section').style.display = 'none';
-      document.getElementById('dns-panel').style.display   = 'none';
-      document.getElementById('log-panel').innerHTML       = '';
-      lastLogCount = 0;
-      activeDomain = '';
-
-      startAnimation();
+      showStatusSection();
 
       try {
         const res  = await fetch(`${API}/build`, {
@@ -745,6 +1017,51 @@
       }
     }
 
+    // ── Import flow ───────────────────────────────────────────────────────
+    async function startImport() {
+      if (importMode === 'zip') {
+        if (!selectedFile) { alert('Please select a ZIP file first'); return; }
+      } else if (importMode === 'github') {
+        const url = document.getElementById('github-url').value.trim();
+        if (!url) { document.getElementById('github-url').focus(); return; }
+      } else if (importMode === 'replit') {
+        const url = document.getElementById('replit-url').value.trim();
+        if (!url) { document.getElementById('replit-url').focus(); return; }
+      }
+
+      showStatusSection();
+
+      try {
+        let res;
+
+        if (importMode === 'zip') {
+          const formData = new FormData();
+          formData.append('file', selectedFile);
+          res = await fetch(`${API}/import`, {
+            method: 'POST',
+            body: formData,
+          });
+        } else {
+          const url = importMode === 'github'
+            ? document.getElementById('github-url').value.trim()
+            : document.getElementById('replit-url').value.trim();
+          res = await fetch(`${API}/import`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: importMode, url }),
+          });
+        }
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Import request failed');
+        pollTimer = setInterval(pollStatus, 3000);
+        pollStatus();
+      } catch (e) {
+        showError(e.message);
+      }
+    }
+
+    // ── Poll status (shared) ──────────────────────────────────────────────
     async function pollStatus() {
       try {
         const res  = await fetch(`${API}/status`);
@@ -842,6 +1159,7 @@
     }
 
     function showError(msg) {
+      document.getElementById('status-section').style.display = 'block';
       const card = document.getElementById('result-card');
       card.className  = 'error';
       card.style.display = 'block';
@@ -851,14 +1169,21 @@
     }
 
     function resetForm() {
-      document.getElementById('input-card').style.display  = 'block';
-      document.getElementById('status-section').style.display = 'none';
-      document.getElementById('result-card').style.display = 'none';
+      document.getElementById('tab-bar').style.display         = 'flex';
+      document.getElementById('input-card').style.display      = 'block';
+      document.getElementById('status-section').style.display  = 'none';
+      document.getElementById('result-card').style.display     = 'none';
       if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
       stopAnimation();
+      // Reset file selection
+      selectedFile = null;
+      const sel = document.getElementById('drop-selected');
+      sel.style.display = 'none';
+      document.querySelector('.drop-icon').textContent = '📦';
+      document.getElementById('zip-file').value = '';
     }
 
-    // ── Task 4: Domain connection ─────────────────────────────────────────
+    // ── Domain connection ─────────────────────────────────────────────────
     async function connectDomain() {
       const domainInput = document.getElementById('domain-input');
       const domain = domainInput.value.trim();

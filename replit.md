@@ -60,9 +60,10 @@ Express 5 API server serving both the Goldy Builds chat UI and the builder backe
 - App setup: `src/app.ts` — serves HTML at `/api`, mounts API routes at `/api`, serves static files from `public/`
 - Routes:
   - `src/routes/health.ts` — `GET /healthz`
-  - `src/routes/build.ts` — `POST /build`, `GET /status`, `POST /callback`
-- Static: `public/index.html` — the Goldy Builds chat UI (dark theme, canvas animation, build log)
-- Depends on: `@workspace/db`, `@workspace/api-zod`, `@anthropic-ai/sdk`
+  - `src/routes/build.ts` — `POST /build`, `GET /status`, `POST /domain`, `GET /domain/check`, `POST /callback` — exports shared pipeline functions
+  - `src/routes/import.ts` — `POST /import` — ZIP upload, GitHub URL, or Replit URL import + rebuild via Claude
+- Static: `public/index.html` — the Goldy Builds chat UI (dark theme, canvas animation, build log, tab switcher)
+- Depends on: `@workspace/db`, `@workspace/api-zod`, `@anthropic-ai/sdk`, `adm-zip`, `multer`
 
 **Required environment variables:**
 - `ANTHROPIC_API_KEY` — Claude API key for code generation
@@ -70,12 +71,26 @@ Express 5 API server serving both the Goldy Builds chat UI and the builder backe
 - `VERCEL_TOKEN` — Vercel API token for deployment
 - `SECRET_CALLBACK_TOKEN` — optional token to secure the `/callback` endpoint
 
-**Build flow:**
+**Build flow (Build New):**
 1. `POST /api/build` — accepts `{idea}`, calls Claude to generate complete project spec + code
 2. Claude returns JSON with `project_name`, `files`, `tech_stack`, `features`
 3. GitHub API creates a repo and pushes all generated files
-4. Vercel API deploys the repo (if `VERCEL_TOKEN` is set)
+4. Vercel API deploys (direct file upload, SSO protection disabled)
 5. `GET /api/status` — returns build state, live logs, and final URL when done
+
+**Import & Rebuild flow:**
+1. `POST /api/import` — three modes:
+   - `multipart/form-data` with `file` field — ZIP file upload
+   - JSON `{mode:"github", url}` — fetches `/zipball/HEAD` from GitHub API
+   - JSON `{mode:"replit", url}` — fetches `{url}.zip` from Replit public export
+2. ZIP parsed with `adm-zip`; binary/large/node_modules files filtered out (max 60 files, 100KB each)
+3. All file contents sent to Claude: "Analyze this project, rebuild as clean static HTML/CSS/JS"
+4. Rebuilt files go through the same GitHub + Vercel pipeline as Build New
+5. Same `GET /api/status` polling, same result card + domain connection panel
+
+**Domain connection:**
+- `POST /api/domain` — adds a domain to the Vercel project, returns exact DNS records (A or CNAME)
+- `GET /api/domain/check` — polls Vercel for domain verification status
 
 - `pnpm --filter @workspace/api-server run dev` — run the dev server
 - `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)

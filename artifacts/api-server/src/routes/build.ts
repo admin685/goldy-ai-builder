@@ -4,13 +4,13 @@ import { createHash } from "crypto";
 
 const router: IRouter = Router();
 
-interface BuildLog {
+export interface BuildLog {
   ts: number;
   msg: string;
   type: "info" | "success" | "error" | "warn";
 }
 
-interface BuildState {
+export interface BuildState {
   status: "idle" | "building" | "done" | "error";
   logs: BuildLog[];
   result: {
@@ -25,18 +25,18 @@ interface BuildState {
   idea?: string;
 }
 
-const state: BuildState = {
+export const state: BuildState = {
   status: "idle",
   logs: [],
   result: {},
 };
 
-function log(msg: string, type: BuildLog["type"] = "info") {
+export function log(msg: string, type: BuildLog["type"] = "info") {
   state.logs.push({ ts: Date.now(), msg, type });
   console.log(`[Goldy] [${type.toUpperCase()}] ${msg}`);
 }
 
-function resetState(idea: string) {
+export function resetState(idea: string) {
   state.status = "building";
   state.logs = [];
   state.result = {};
@@ -105,7 +105,7 @@ Output format — return ONLY valid JSON, no markdown fences, no explanation:
 
 // ── GitHub functions ───────────────────────────────────────────────────────
 
-async function getGitHubUsername(token: string): Promise<string> {
+export async function getGitHubUsername(token: string): Promise<string> {
   const res = await fetch("https://api.github.com/user", {
     headers: {
       Authorization: `token ${token}`,
@@ -116,7 +116,7 @@ async function getGitHubUsername(token: string): Promise<string> {
   return data.login;
 }
 
-async function createGitHubRepo(
+export async function createGitHubRepo(
   projectName: string,
   description: string
 ): Promise<{ repoName: string; repoUrl: string }> {
@@ -156,7 +156,7 @@ async function createGitHubRepo(
   return { repoName, repoUrl: data.html_url };
 }
 
-async function pushFilesToGitHub(
+export async function pushFilesToGitHub(
   repoName: string,
   files: Record<string, string>
 ): Promise<void> {
@@ -253,7 +253,7 @@ async function uploadFileToVercel(
   return { sha, size };
 }
 
-async function deployToVercel(
+export async function deployToVercel(
   projectName: string,
   files: Record<string, string>
 ): Promise<{ url: string; projectId: string; deploymentName: string }> {
