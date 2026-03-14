@@ -5,150 +5,675 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin — Goldy Builds</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --gold: #c9a84c;
-    --gold-light: #e2c97e;
-    --bg: #0a0a0f;
-    --card-bg: #111118;
-    --border: rgba(201,168,76,0.2);
-    --text: #e8e0d0;
-    --muted: #8a8070;
-    --red: rgba(220,50,50,0.8);
-  }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-  nav {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 32px; border-bottom: 1px solid var(--border);
-    background: rgba(10,10,15,0.95); position: sticky; top: 0; z-index: 100;
-  }
-  .nav-logo { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--gold); text-decoration: none; }
-  .nav-right { display: flex; gap: 16px; align-items: center; }
-  .badge { background: rgba(220,50,50,0.15); border: 1px solid rgba(220,50,50,0.4); color: #ff8888; font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; }
-  .nav-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 6px; padding: 7px 16px; font-size: 0.85rem; font-weight: 500; cursor: pointer; font-family: inherit; }
-  .nav-btn:hover { border-color: var(--gold); color: var(--gold); }
-  main { max-width: 1200px; margin: 0 auto; padding: 40px 24px; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
-  .stat-card {
-    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
-    padding: 20px; text-align: center;
-  }
-  .stat-num { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--gold); }
-  .stat-label { color: var(--muted); font-size: 0.8rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
-  .section-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--gold-light); margin-bottom: 16px; margin-top: 36px; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-  th { text-align: left; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
-  td { padding: 10px 12px; border-bottom: 1px solid rgba(201,168,76,0.07); color: var(--text); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  tr:hover td { background: rgba(201,168,76,0.03); }
-  .role-badge {
-    font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px;
-    text-transform: uppercase; letter-spacing: 0.06em;
-  }
-  .role-badge.admin { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.4); color: var(--gold); }
-  .role-badge.user { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--muted); }
-  .link-cell a { color: var(--gold); text-decoration: none; font-size: 0.82rem; }
-  .link-cell a:hover { text-decoration: underline; }
-  .loading { text-align: center; padding: 60px; color: var(--muted); }
-  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .error-msg { background: rgba(220,50,50,0.1); border: 1px solid rgba(220,50,50,0.4); color: #ff8888; border-radius: 8px; padding: 14px; text-align: center; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #111C1A;
+  --bg2: #172320;
+  --bg3: #1E2D2A;
+  --accent: #34D399;
+  --accent-dark: #28a87a;
+  --gold: #F59E0B;
+  --text: #E8F5F0;
+  --text-muted: #7FA99A;
+  --border: rgba(52,211,153,0.12);
+  --border-strong: rgba(52,211,153,0.25);
+  --red: #ef4444;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}
+html, body { height: 100%; overflow: hidden; }
+body { font-family: var(--font-body); background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+
+nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px; border-bottom: 1px solid var(--border);
+  background: #0D1614; flex-shrink: 0; height: 52px; z-index: 50;
+}
+.nav-logo { font-family: var(--font-display); font-size: 1.2rem; color: var(--accent); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+.nav-logo img { height: 32px; width: auto; }
+.nav-right { display: flex; gap: 12px; align-items: center; }
+.badge { background: rgba(52,211,153,0.12); border: 1px solid var(--border-strong); color: var(--accent); font-size: 0.68rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.08em; }
+.nav-btn { background: none; border: 1px solid var(--border); color: var(--text-muted); border-radius: 6px; padding: 6px 14px; font-size: 0.82rem; font-weight: 500; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.layout { display: flex; flex: 1; overflow: hidden; }
+
+.sidebar {
+  width: 220px; flex-shrink: 0; background: #0D1614;
+  border-right: 1px solid var(--border); overflow-y: auto;
+  display: flex; flex-direction: column; padding: 12px 0;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; font-size: 0.85rem; color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s; border-left: 3px solid transparent;
+  user-select: none;
+}
+.sidebar-item:hover { color: var(--text); background: rgba(52,211,153,0.04); }
+.sidebar-item.active { color: var(--accent); background: rgba(52,211,153,0.08); border-left-color: var(--accent); font-weight: 600; }
+.sidebar-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+.main-content {
+  flex: 1; overflow-y: auto; padding: 28px 32px;
+}
+.main-content::-webkit-scrollbar { width: 5px; }
+.main-content::-webkit-scrollbar-track { background: transparent; }
+.main-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.section { display: none; }
+.section.active { display: block; }
+.section-title { font-family: var(--font-display); font-size: 1.4rem; color: var(--text); margin-bottom: 20px; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px; text-align: center;
+}
+.stat-num { font-family: var(--font-display); font-size: 2rem; color: var(--accent); }
+.stat-label { color: var(--text-muted); font-size: 0.78rem; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.card-title { font-size: 0.82rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 14px; }
+
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th { text-align: left; color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 600; }
+td { padding: 10px 12px; border-bottom: 1px solid rgba(52,211,153,0.05); color: var(--text); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr:hover td { background: rgba(52,211,153,0.03); }
+td a { color: var(--accent); text-decoration: none; font-size: 0.82rem; }
+td a:hover { text-decoration: underline; }
+
+.role-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+.role-badge.admin { background: rgba(52,211,153,0.12); border: 1px solid var(--border-strong); color: var(--accent); }
+.role-badge.user { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); color: var(--text-muted); }
+.role-badge.blocked { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: var(--red); }
+
+.status-badge { font-size: 0.7rem; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+.status-badge.done { background: rgba(52,211,153,0.12); color: var(--accent); }
+.status-badge.building { background: rgba(245,158,11,0.12); color: var(--gold); }
+.status-badge.error { background: rgba(239,68,68,0.12); color: var(--red); }
+
+.btn {
+  border: none; border-radius: 6px; padding: 7px 14px;
+  font-size: 0.82rem; font-weight: 600; font-family: inherit;
+  cursor: pointer; transition: opacity 0.15s;
+}
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-accent { background: var(--accent); color: #111C1A; }
+.btn-danger { background: var(--red); color: #fff; }
+.btn-ghost { background: rgba(255,255,255,0.06); color: var(--text-muted); border: 1px solid var(--border); }
+.btn-sm { padding: 4px 10px; font-size: 0.75rem; }
+
+.action-btns { display: flex; gap: 6px; }
+
+.search-input {
+  width: 100%; max-width: 320px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 0.85rem;
+  font-family: inherit; outline: none; margin-bottom: 16px; transition: border 0.2s;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.filter-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.filter-btn {
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text-muted);
+  border-radius: 6px; padding: 5px 12px; font-size: 0.78rem; font-weight: 500;
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.filter-btn:hover { border-color: var(--accent); color: var(--text); }
+.filter-btn.active { background: rgba(52,211,153,0.1); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+
+.log-box {
+  background: #0D1614; border: 1px solid var(--border); border-radius: 8px;
+  padding: 16px; font-family: 'Menlo', 'Consolas', monospace; font-size: 0.78rem;
+  color: var(--text-muted); height: 500px; overflow-y: auto; white-space: pre-wrap; line-height: 1.6;
+}
+
+.prompt-block { margin-bottom: 24px; }
+.prompt-label { font-weight: 600; color: var(--text); font-size: 0.9rem; margin-bottom: 8px; }
+.prompt-textarea {
+  width: 100%; min-height: 120px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px; color: var(--text); font-size: 0.82rem;
+  font-family: 'Menlo', 'Consolas', monospace; outline: none; resize: vertical;
+  line-height: 1.5; transition: border 0.2s;
+}
+.prompt-textarea:focus { border-color: var(--accent); }
+
+.settings-field { margin-bottom: 18px; }
+.settings-label { font-size: 0.82rem; color: var(--text-muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.settings-input {
+  width: 100%; max-width: 400px; background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 0.85rem;
+  font-family: inherit; outline: none; transition: border 0.2s;
+}
+.settings-input:focus { border-color: var(--accent); }
+
+.cost-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+.cost-item { background: var(--bg3); border-radius: 8px; padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+.cost-service { font-size: 0.85rem; color: var(--text); font-weight: 500; }
+.cost-amount { font-family: var(--font-display); font-size: 1.1rem; color: var(--accent); }
+
+.toast {
+  position: fixed; bottom: 24px; right: 24px; background: var(--accent); color: #111C1A;
+  padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+  z-index: 1000; opacity: 0; transform: translateY(10px); transition: all 0.3s;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+.loading-spin { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 40px auto; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.crew-pct { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.crew-card { background: var(--bg3); border-radius: 8px; padding: 14px; text-align: center; }
+.crew-name { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 4px; }
+.crew-pct-val { font-family: var(--font-display); font-size: 1.3rem; color: var(--gold); }
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 900px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .two-col, .crew-pct, .cost-grid { grid-template-columns: 1fr; }
+  .sidebar { width: 56px; }
+  .sidebar-item span:not(.sidebar-icon) { display: none; }
+  .sidebar-item { padding: 10px 0; justify-content: center; }
+}
 </style>
 </head>
 <body>
+
 <nav>
-  <a class="nav-logo" href="/"><img src="/logo.png" alt="Goldy" style="height:40px;width:auto;vertical-align:middle;margin-right:8px;">Goldy</a>
+  <a class="nav-logo" href="/"><img src="/logo.png" alt="Goldy">Goldy Admin</a>
   <div class="nav-right">
     <span class="badge">ADMIN</span>
+    <a href="/dashboard" class="nav-btn">Dashboard</a>
     <button class="nav-btn" onclick="logout()">Logout</button>
   </div>
 </nav>
-<main>
-  <div class="stats" id="stats">
-    <div class="stat-card"><div class="spinner"></div></div>
-  </div>
-  <div id="users-section"></div>
-  <div id="projects-section"></div>
-</main>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="main-content" id="main-content"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-  const API = '/api';
-  const token = localStorage.getItem('gb_token');
-  if (!token) { window.location.href = '/login'; }
+const API = '/api';
+const token = localStorage.getItem('gb_token');
+if (!token) window.location.href = '/login';
+const user = JSON.parse(localStorage.getItem('gb_user') || '{}');
+if (user.role !== 'admin') window.location.href = '/dashboard';
 
-  const user = JSON.parse(localStorage.getItem('gb_user') || '{}');
-  if (user.role !== 'admin') { window.location.href = '/dashboard'; }
+const headers = { Authorization: `Bearer ${token}` };
+const jsonHeaders = { ...headers, 'Content-Type': 'application/json' };
 
-  function logout() {
-    localStorage.removeItem('gb_token');
-    localStorage.removeItem('gb_user');
-    window.location.href = '/login';
+let allUsers = [];
+let allProjects = [];
+let logPollTimer = null;
+
+const SECTIONS = [
+  { id: 'overview', icon: '📊', label: 'Overview' },
+  { id: 'users', icon: '👥', label: 'Users' },
+  { id: 'projects', icon: '🏗️', label: 'Projects' },
+  { id: 'deployments', icon: '🚀', label: 'Deployments' },
+  { id: 'analytics', icon: '📈', label: 'Analytics' },
+  { id: 'logs', icon: '📋', label: 'Build Logs' },
+  { id: 'domains', icon: '🌐', label: 'Domains' },
+  { id: 'ai', icon: '🤖', label: 'AI Settings' },
+  { id: 'billing', icon: '💰', label: 'Billing' },
+  { id: 'settings', icon: '⚙️', label: 'Settings' },
+];
+
+function logout() {
+  localStorage.removeItem('gb_token');
+  localStorage.removeItem('gb_user');
+  window.location.href = '/login';
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(s) { return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function fmtShort(s) { return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function renderSidebar() {
+  document.getElementById('sidebar').innerHTML = SECTIONS.map(s =>
+    `<div class="sidebar-item" data-section="${s.id}" onclick="switchSection('${s.id}')">
+      <span class="sidebar-icon">${s.icon}</span><span>${s.label}</span>
+    </div>`
+  ).join('');
+}
+
+let activeSection = 'overview';
+function switchSection(id) {
+  if (logPollTimer) { clearInterval(logPollTimer); logPollTimer = null; }
+  activeSection = id;
+  document.querySelectorAll('.sidebar-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.section === id);
+  });
+  loadSection(id);
+}
+
+async function fetchJSON(url) {
+  const res = await fetch(url, { headers });
+  if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return null; }
+  return res.json();
+}
+
+async function loadData() {
+  const [u, p] = await Promise.all([
+    fetchJSON(`${API}/auth/admin/users`),
+    fetchJSON(`${API}/auth/admin/projects`),
+  ]);
+  if (u) allUsers = u;
+  if (p) allProjects = p;
+}
+
+async function loadSection(id) {
+  const mc = document.getElementById('main-content');
+  mc.innerHTML = '<div class="loading-spin"></div>';
+
+  if (!allUsers.length && !allProjects.length) await loadData();
+
+  switch (id) {
+    case 'overview': return renderOverview(mc);
+    case 'users': return renderUsers(mc);
+    case 'projects': return renderProjects(mc);
+    case 'deployments': return renderDeployments(mc);
+    case 'analytics': return renderAnalytics(mc);
+    case 'logs': return renderLogs(mc);
+    case 'domains': return renderDomains(mc);
+    case 'ai': return renderAI(mc);
+    case 'billing': return renderBilling(mc);
+    case 'settings': return renderSettings(mc);
   }
+}
 
-  function fmt(str) {
-    const d = new Date(str);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function getProjectStatus(p) {
+  if (p.vercel_url) return 'done';
+  return 'building';
+}
+
+async function renderOverview(mc) {
+  const deployed = allProjects.filter(p => p.vercel_url).length;
+  const successRate = allProjects.length ? Math.round((deployed / allProjects.length) * 100) : 0;
+
+  let chartData = [];
+  try { chartData = await fetchJSON(`${API}/admin/builds-chart`) || []; } catch {}
+
+  mc.innerHTML = `
+    <h1 class="section-title">Overview</h1>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-num">${allUsers.length}</div><div class="stat-label">Total Users</div></div>
+      <div class="stat-card"><div class="stat-num">${allProjects.length}</div><div class="stat-label">Total Projects</div></div>
+      <div class="stat-card"><div class="stat-num">${successRate}%</div><div class="stat-label">Success Rate</div></div>
+      <div class="stat-card"><div class="stat-num">$${(allProjects.length * 0.12).toFixed(0)}</div><div class="stat-label">Est. Total Cost</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Builds — Last 30 Days</div>
+        <canvas id="builds-chart" height="200"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">AI Cost Breakdown</div>
+        <div class="crew-pct">
+          <div class="crew-card"><div class="crew-name">Goldy (Claude)</div><div class="crew-pct-val">40%</div></div>
+          <div class="crew-card"><div class="crew-name">Boris (GPT)</div><div class="crew-pct-val">25%</div></div>
+          <div class="crew-card"><div class="crew-name">Masha (Recraft)</div><div class="crew-pct-val">20%</div></div>
+          <div class="crew-card"><div class="crew-name">Ivan (FLUX)</div><div class="crew-pct-val">15%</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Recent Builds</span>
+        <button class="btn btn-accent btn-sm" onclick="resetBuild()">Reset Stuck Build</button>
+      </div>
+      <table>
+        <thead><tr><th>Project</th><th>User</th><th>Status</th><th>URL</th><th>Created</th></tr></thead>
+        <tbody>${allProjects.slice(0, 20).map(p => `
+          <tr>
+            <td title="${esc(p.name)}">${esc(p.name)}</td>
+            <td>${esc(p.user_email)}</td>
+            <td><span class="status-badge ${getProjectStatus(p)}">${getProjectStatus(p)}</span></td>
+            <td>${p.vercel_url ? `<a href="${esc(p.vercel_url)}" target="_blank">View ↗</a>` : '—'}</td>
+            <td>${fmt(p.created_at)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  if (chartData.length) {
+    const ctx = document.getElementById('builds-chart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.map(d => fmtShort(d.day)),
+        datasets: [{
+          label: 'Builds',
+          data: chartData.map(d => Number(d.count)),
+          backgroundColor: 'rgba(52,211,153,0.5)',
+          borderColor: '#34D399',
+          borderWidth: 1, borderRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7FA99A', font: { size: 10 } }, grid: { color: 'rgba(52,211,153,0.06)' } },
+          y: { beginAtZero: true, ticks: { color: '#7FA99A', stepSize: 1 }, grid: { color: 'rgba(52,211,153,0.06)' } },
+        }
+      }
+    });
   }
+}
 
-  async function load() {
+async function resetBuild() {
+  const r = await adminFetch(`${API}/admin/reset-build`, { method: 'POST' });
+  if (r) showToast('Build state reset to idle');
+}
+
+function renderUsers(mc) {
+  mc.innerHTML = `
+    <h1 class="section-title">Users</h1>
+    <input class="search-input" id="user-search" placeholder="Search by email…" oninput="filterUsers()">
+    <div id="users-table"></div>`;
+  filterUsers();
+}
+
+function filterUsers() {
+  const q = (document.getElementById('user-search')?.value || '').toLowerCase();
+  const filtered = q ? allUsers.filter(u => u.email.toLowerCase().includes(q)) : allUsers;
+  const projCount = {};
+  allProjects.forEach(p => { projCount[p.user_email] = (projCount[p.user_email] || 0) + 1; });
+
+  document.getElementById('users-table').innerHTML = `
+    <table>
+      <thead><tr><th>Email</th><th>Joined</th><th>Projects</th><th>Role</th><th>Actions</th></tr></thead>
+      <tbody>${filtered.map(u => `
+        <tr>
+          <td>${esc(u.email)}</td>
+          <td>${fmt(u.created_at)}</td>
+          <td>${projCount[u.email] || 0}</td>
+          <td><span class="role-badge ${u.role}">${u.role}</span></td>
+          <td class="action-btns">
+            ${u.role !== 'admin' ? `<button class="btn btn-ghost btn-sm" onclick="makeAdmin(${u.id})">Make Admin</button>` : ''}
+            ${u.role !== 'blocked' ? `<button class="btn btn-ghost btn-sm" onclick="blockUser(${u.id})">Block</button>` : ''}
+            <button class="btn btn-danger btn-sm" onclick="deleteUser(${u.id})">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function adminFetch(url, opts = {}) {
+  const res = await fetch(url, { ...opts, headers: opts.body ? jsonHeaders : headers });
+  if (res.status === 401 || res.status === 403) { window.location.href = '/login'; return null; }
+  const data = await res.json();
+  if (!res.ok) { showToast(data.error || 'Request failed'); return null; }
+  return data;
+}
+
+async function makeAdmin(id) {
+  const r = await adminFetch(`${API}/admin/users/${id}/make-admin`, { method: 'POST' });
+  if (!r) return;
+  await loadData(); filterUsers(); showToast('User promoted');
+}
+async function blockUser(id) {
+  const r = await adminFetch(`${API}/admin/users/${id}/block`, { method: 'POST' });
+  if (!r) return;
+  await loadData(); filterUsers(); showToast('User blocked');
+}
+async function deleteUser(id) {
+  if (!confirm('Delete this user and all their projects?')) return;
+  const r = await adminFetch(`${API}/admin/users/${id}`, { method: 'DELETE' });
+  if (!r) return;
+  await loadData(); filterUsers(); showToast('User deleted');
+}
+
+let projectFilter = 'all';
+function renderProjects(mc) {
+  mc.innerHTML = `
+    <h1 class="section-title">Projects</h1>
+    <div class="filter-row" id="project-filters">
+      <button class="filter-btn active" onclick="setProjectFilter('all')">All</button>
+      <button class="filter-btn" onclick="setProjectFilter('done')">Deployed</button>
+      <button class="filter-btn" onclick="setProjectFilter('building')">Building</button>
+    </div>
+    <div id="projects-table"></div>`;
+  projectFilter = 'all';
+  renderProjectsTable();
+}
+
+function setProjectFilter(f) {
+  projectFilter = f;
+  document.querySelectorAll('#project-filters .filter-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().includes(f === 'all' ? 'all' : f)));
+  renderProjectsTable();
+}
+
+function renderProjectsTable() {
+  const filtered = projectFilter === 'all' ? allProjects :
+    allProjects.filter(p => getProjectStatus(p) === projectFilter);
+
+  document.getElementById('projects-table').innerHTML = `
+    <table>
+      <thead><tr><th>Name</th><th>Owner</th><th>URL</th><th>Status</th><th>Created</th><th>Actions</th></tr></thead>
+      <tbody>${filtered.map(p => `
+        <tr>
+          <td title="${esc(p.name)}">${esc(p.name)}</td>
+          <td>${esc(p.user_email)}</td>
+          <td>${p.vercel_url ? `<a href="${esc(p.vercel_url)}" target="_blank">View ↗</a>` : '—'}</td>
+          <td><span class="status-badge ${getProjectStatus(p)}">${getProjectStatus(p)}</span></td>
+          <td>${fmt(p.created_at)}</td>
+          <td class="action-btns">
+            <a href="/editor?id=${p.id}" class="btn btn-ghost btn-sm">Edit</a>
+            <button class="btn btn-danger btn-sm" onclick="deleteProject(${p.id})">Delete</button>
+          </td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete this project?')) return;
+  const r = await adminFetch(`${API}/admin/projects/${id}`, { method: 'DELETE' });
+  if (!r) return;
+  await loadData(); renderProjectsTable(); showToast('Project deleted');
+}
+
+function renderDeployments(mc) {
+  const deployed = allProjects.filter(p => p.vercel_url).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  mc.innerHTML = `
+    <h1 class="section-title">Deployments</h1>
+    <div class="card">
+      <table>
+        <thead><tr><th>Project</th><th>Owner</th><th>Live URL</th><th>GitHub</th><th>Deployed</th></tr></thead>
+        <tbody>${deployed.map(p => `
+          <tr>
+            <td>${esc(p.name)}</td>
+            <td>${esc(p.user_email)}</td>
+            <td><a href="${esc(p.vercel_url)}" target="_blank">${esc(p.vercel_url.replace('https://',''))}</a></td>
+            <td>${p.github_url ? `<a href="${esc(p.github_url)}" target="_blank">Repo</a>` : '—'}</td>
+            <td>${fmt(p.created_at)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function renderAnalytics(mc) {
+  let data = { today: 0, week: 0, month: 0, topUsers: [] };
+  try { data = await fetchJSON(`${API}/admin/analytics`) || data; } catch {}
+
+  mc.innerHTML = `
+    <h1 class="section-title">Analytics</h1>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-num">${data.today}</div><div class="stat-label">Builds Today</div></div>
+      <div class="stat-card"><div class="stat-num">${data.week}</div><div class="stat-label">This Week</div></div>
+      <div class="stat-card"><div class="stat-num">${data.month}</div><div class="stat-label">This Month</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Top 5 Active Users</div>
+      <table>
+        <thead><tr><th>Email</th><th>Projects</th></tr></thead>
+        <tbody>${(data.topUsers || []).map(u => `
+          <tr><td>${esc(u.email)}</td><td>${u.count}</td></tr>`).join('') || '<tr><td colspan="2" style="color:var(--text-muted)">No data yet</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function renderLogs(mc) {
+  mc.innerHTML = `
+    <h1 class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>Build Logs</span>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('log-box').textContent=''">Clear</button>
+    </h1>
+    <div class="log-box" id="log-box">Waiting for logs…</div>`;
+
+  let lastLen = 0;
+  async function pollLogs() {
     try {
-      const headers = { 'Authorization': `Bearer ${token}` };
-      const [usersRes, projectsRes] = await Promise.all([
-        fetch(`${API}/auth/admin/users`, { headers }),
-        fetch(`${API}/auth/admin/projects`, { headers }),
-      ]);
-
-      if (usersRes.status === 401 || usersRes.status === 403) { window.location.href = '/login'; return; }
-
-      const users = await usersRes.json();
-      const projects = await projectsRes.json();
-
-      document.getElementById('stats').innerHTML = `
-        <div class="stat-card"><div class="stat-num">${users.length}</div><div class="stat-label">Total Users</div></div>
-        <div class="stat-card"><div class="stat-num">${projects.length}</div><div class="stat-label">Total Projects</div></div>
-        <div class="stat-card"><div class="stat-num">${users.filter(u => u.role === 'admin').length}</div><div class="stat-label">Admins</div></div>
-        <div class="stat-card"><div class="stat-num">${projects.filter(p => p.vercel_url).length}</div><div class="stat-label">Deployed</div></div>
-      `;
-
-      document.getElementById('users-section').innerHTML = `
-        <h2 class="section-title">Users</h2>
-        <table>
-          <thead><tr><th>#</th><th>Email</th><th>Role</th><th>Joined</th></tr></thead>
-          <tbody>
-            ${users.map((u, i) => `
-              <tr>
-                <td>${i + 1}</td>
-                <td>${u.email}</td>
-                <td><span class="role-badge ${u.role}">${u.role}</span></td>
-                <td>${fmt(u.created_at)}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      `;
-
-      document.getElementById('projects-section').innerHTML = `
-        <h2 class="section-title">All Projects</h2>
-        <table>
-          <thead><tr><th>#</th><th>Name</th><th>User</th><th>Live URL</th><th>GitHub</th><th>Built</th></tr></thead>
-          <tbody>
-            ${projects.map((p, i) => `
-              <tr>
-                <td>${i + 1}</td>
-                <td title="${p.name}">${p.name}</td>
-                <td title="${p.user_email}">${p.user_email}</td>
-                <td class="link-cell">${p.vercel_url ? `<a href="${p.vercel_url}" target="_blank">View</a>` : '—'}</td>
-                <td class="link-cell">${p.github_url ? `<a href="${p.github_url}" target="_blank">Repo</a>` : '—'}</td>
-                <td>${fmt(p.created_at)}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      `;
-    } catch (e) {
-      document.getElementById('stats').innerHTML = `<div class="error-msg">Failed to load admin data. Please refresh.</div>`;
-    }
+      const data = await fetchJSON(`${API}/status`);
+      if (!data) return;
+      const box = document.getElementById('log-box');
+      if (!box) { clearInterval(logPollTimer); logPollTimer = null; return; }
+      const logs = data.logs || [];
+      if (logs.length > lastLen) {
+        for (let i = lastLen; i < logs.length; i++) {
+          const l = logs[i];
+          const t = new Date(l.ts).toLocaleTimeString();
+          box.textContent += `[${t}] [${l.type.toUpperCase()}] ${l.msg}\n`;
+        }
+        lastLen = logs.length;
+        box.scrollTop = box.scrollHeight;
+      }
+      if (logs.length === 0 && lastLen === 0) {
+        box.textContent = `Status: ${data.status}\nStage: ${data.stage || '—'}\n\nNo log entries yet. Start a build to see live logs.`;
+      }
+    } catch {}
   }
+  pollLogs();
+  logPollTimer = setInterval(pollLogs, 2000);
+}
 
-  load();
+function renderDomains(mc) {
+  const withDomain = allProjects.filter(p => p.vercel_url && p.vercel_url.includes('goldy.team'));
+  mc.innerHTML = `
+    <h1 class="section-title">Domains</h1>
+    <div class="card">
+      <table>
+        <thead><tr><th>Project</th><th>Domain</th><th>Owner</th></tr></thead>
+        <tbody>${withDomain.length ? withDomain.map(p => `
+          <tr>
+            <td>${esc(p.name)}</td>
+            <td><a href="${esc(p.vercel_url)}" target="_blank">${esc(p.vercel_url.replace('https://',''))}</a></td>
+            <td>${esc(p.user_email)}</td>
+          </tr>`).join('') : '<tr><td colspan="3" style="color:var(--text-muted)">No custom domains yet</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function renderAI(mc) {
+  let prompts = [];
+  try { prompts = await fetchJSON(`${API}/admin/prompts`) || []; } catch {}
+
+  const members = ['Goldy', 'Boris', 'Masha', 'Ivan'];
+  const promptMap = {};
+  prompts.forEach(p => { promptMap[p.member] = p.prompt; });
+
+  mc.innerHTML = `
+    <h1 class="section-title">AI Settings</h1>
+    <div class="card">
+      <div class="card-title">System Prompts</div>
+      ${members.map(m => `
+        <div class="prompt-block">
+          <div class="prompt-label">${m}</div>
+          <textarea class="prompt-textarea" id="prompt-${m}">${esc(promptMap[m] || '')}</textarea>
+          <button class="btn btn-accent btn-sm" style="margin-top:8px" onclick="savePrompt('${m}')">Save ${m}'s Prompt</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function savePrompt(member) {
+  const prompt = document.getElementById(`prompt-${member}`).value;
+  const r = await adminFetch(`${API}/admin/prompts`, {
+    method: 'POST',
+    body: JSON.stringify({ member, prompt }),
+  });
+  if (r) showToast(`${member}'s prompt saved`);
+}
+
+async function renderBilling(mc) {
+  let data = { totalBuilds: 0, deployedBuilds: 0, monthlyBuilds: 0, estimatedMonthlyCost: '0', breakdown: {} };
+  try { data = await fetchJSON(`${API}/admin/billing`) || data; } catch {}
+
+  mc.innerHTML = `
+    <h1 class="section-title">Billing</h1>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-num">${data.totalBuilds}</div><div class="stat-label">Total Builds</div></div>
+      <div class="stat-card"><div class="stat-num">${data.deployedBuilds}</div><div class="stat-label">Deployed</div></div>
+      <div class="stat-card"><div class="stat-num">$${data.estimatedMonthlyCost}</div><div class="stat-label">Est. Monthly Cost</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Cost Breakdown (Estimated)</div>
+      <div class="cost-grid">
+        <div class="cost-item"><span class="cost-service">Claude (Goldy)</span><span class="cost-amount">$${data.breakdown.claude || '0'}</span></div>
+        <div class="cost-item"><span class="cost-service">GPT-4o (Boris)</span><span class="cost-amount">$${data.breakdown.openai || '0'}</span></div>
+        <div class="cost-item"><span class="cost-service">FLUX (Ivan)</span><span class="cost-amount">$${data.breakdown.replicate || '0'}</span></div>
+        <div class="cost-item"><span class="cost-service">Recraft (Masha)</span><span class="cost-amount">$${data.breakdown.recraft || '0'}</span></div>
+      </div>
+    </div>`;
+}
+
+async function renderSettings(mc) {
+  let settings = {};
+  try { settings = await fetchJSON(`${API}/admin/settings`) || {}; } catch {}
+
+  mc.innerHTML = `
+    <h1 class="section-title">Settings</h1>
+    <div class="card">
+      <div class="settings-field">
+        <div class="settings-label">Custom Domain</div>
+        <input class="settings-input" id="s-domain" value="${esc(settings.CUSTOM_DOMAIN || '')}">
+      </div>
+      <div class="settings-field">
+        <div class="settings-label">Build Timeout (minutes)</div>
+        <input class="settings-input" id="s-timeout" type="number" value="${esc(settings.BUILD_TIMEOUT || '20')}">
+      </div>
+      <div class="settings-field">
+        <div class="settings-label">Max Files Per Project</div>
+        <input class="settings-input" id="s-maxfiles" type="number" value="${esc(settings.MAX_FILES || '30')}">
+      </div>
+      <button class="btn btn-accent" style="margin-top:12px" onclick="saveSettings()">Save Settings</button>
+    </div>`;
+}
+
+async function saveSettings() {
+  const body = {
+    CUSTOM_DOMAIN: document.getElementById('s-domain').value,
+    BUILD_TIMEOUT: document.getElementById('s-timeout').value,
+    MAX_FILES: document.getElementById('s-maxfiles').value,
+  };
+  const r = await adminFetch(`${API}/admin/settings`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (r) showToast('Settings saved');
+}
+
+renderSidebar();
+switchSection('overview');
 </script>
 </body>
 </html>

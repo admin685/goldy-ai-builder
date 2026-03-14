@@ -13,7 +13,7 @@ pnpm workspace monorepo using TypeScript and Express.
 - `/dashboard` — user's projects list
 - `/editor?id={projectId}` — split-screen editor (chat left + preview iframe right)
 - `/login`, `/register` — auth pages
-- `/admin` — admin panel (users + all projects)
+- `/admin` — full admin dashboard (sidebar nav, 10 sections: Overview, Users, Projects, Deployments, Analytics, Build Logs, Domains, AI Settings, Billing, Settings)
 
 ## Stack
 
@@ -44,6 +44,7 @@ artifacts/api-server/
 │       ├── build.ts       — 5-stage build pipeline + /build, /status, /domain, /admin/reset-build
 │       ├── import.ts      — /import (ZIP / GitHub / Replit) with per-file rebuild
 │       ├── edit.ts        — /edit, /edit/confirm, /edit/discard, /edit/status, /edit/history
+│       ├── admin.ts       — admin dashboard endpoints: analytics, prompts, billing, settings, user/project mgmt
 │       └── health.ts      — /healthz
 ├── public/
 │   ├── index.html         — landing page
