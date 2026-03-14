@@ -359,7 +359,10 @@ async function renderOverview(mc) {
   for (let i = 29; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    days30.push(d.toISOString().slice(0, 10));
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    days30.push(`${yyyy}-${mm}-${dd}`);
   }
   const countMap = {};
   chartData.forEach(d => { countMap[d.day ? d.day.slice(0, 10) : ''] = Number(d.count); });
