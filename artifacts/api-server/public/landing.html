@@ -6,7 +6,7 @@
   <title>Goldy Builds — Your idea. Live in 90 seconds.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Nunito:wght@400;600;700;800&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet" />
   <style>
     /* ── Variables ── */
     :root {
@@ -25,7 +25,7 @@
       --radius: 12px;
       --radius-lg: 20px;
       --transition: 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-      --font-display: 'Bangers', cursive;
+      --font-display: 'Playfair Display', serif;
       --font-body: 'Nunito', sans-serif;
       --grid-line: rgba(255, 215, 0, 0.05);
       --max-w: 1100px;
@@ -34,9 +34,25 @@
     /* ── Reset ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { background: var(--bg); color: var(--text); font-family: var(--font-body); line-height: 1.6; }
+    body { background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%); color: var(--text); font-family: var(--font-body); line-height: 1.6; }
     a { color: inherit; text-decoration: none; }
     img { max-width: 100%; display: block; }
+
+    /* ── Hero overlay — ensures text reads over FLUX background ── */
+    #hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        to right,
+        rgba(13, 17, 23, 0.88) 0%,
+        rgba(13, 17, 23, 0.60) 50%,
+        rgba(13, 17, 23, 0.30) 100%
+      );
+      z-index: 0;
+      pointer-events: none;
+    }
+    #hero > * { position: relative; z-index: 1; }
 
     /* ── Grid background ── */
     .hero-grid-bg {
@@ -61,7 +77,7 @@
       padding: 14px 32px;
       background: rgba(13, 17, 23, 0.8);
       backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
+      border-bottom: 2px solid var(--gold-light);
       transition: border-color var(--transition), box-shadow var(--transition);
     }
     #main-nav.scrolled {
@@ -73,6 +89,7 @@
       font-size: 1.5rem;
       letter-spacing: 2px;
       color: var(--gold);
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -160,6 +177,10 @@
       display: flex;
       align-items: center;
       overflow: hidden;
+      background-image: url('https://replicate.delivery/xezq/VBM8YdRdAaaADpwm4dcjDR1UhbK30XLPed5aALRXXstN1WILA/out-0.webp');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
     .hero-glow {
       position: absolute;
@@ -168,7 +189,7 @@
       transform: translate(-50%, -50%);
       width: 700px;
       height: 700px;
-      background: radial-gradient(ellipse, rgba(255, 215, 0, 0.07) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(255, 223, 127, 0.20) 0%, transparent 80%);
       pointer-events: none;
     }
     .particles {
@@ -621,9 +642,9 @@
       <div class="mascot-wrap">
         <img
           class="mascot-svg"
-          src="https://img.recraft.ai/768rTYWGy-6p1UtN7LFNZvZpyYChBo1-KEHKfGkcUn8/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/4f5c1087-a673-45c3-9c3b-fd6751f5c1ea"
-          alt="Goldy — construction worker mascot"
-          style="object-fit:contain;border-radius:16px;"
+          src="https://img.recraft.ai/gVmpJcSfPbL54GOlzYgqyHyEOdNbH5Z1Q2rAEPoOkWw/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/71fb74bc-cfab-4c7d-a3db-e36725629298"
+          alt="Goldy — construction foreman mascot"
+          style="object-fit:contain;border-radius:16px;filter:drop-shadow(0 8px 32px rgba(255,215,0,0.3));"
         />
       </div>
     </div>
