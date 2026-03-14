@@ -316,7 +316,7 @@ async function renderOverview(mc) {
       <div class="stat-card"><div class="stat-num">${stats.users}</div><div class="stat-label">Total Users</div></div>
       <div class="stat-card"><div class="stat-num">${stats.projects}</div><div class="stat-label">Total Projects</div></div>
       <div class="stat-card"><div class="stat-num">${stats.successRate}%</div><div class="stat-label">Success Rate</div></div>
-      <div class="stat-card"><div class="stat-num">$${stats.estimatedCost}</div><div class="stat-label">Est. Total Cost</div></div>
+      <div class="stat-card"><div class="stat-num">$${stats.estimatedMonthlyCost}</div><div class="stat-label">Monthly AI Cost</div></div>
     </div>
     <div class="two-col">
       <div class="card">
@@ -326,10 +326,10 @@ async function renderOverview(mc) {
       <div class="card">
         <div class="card-title">AI Cost Breakdown</div>
         <div class="crew-pct">
-          <div class="crew-card"><div class="crew-name">Goldy (Claude)</div><div class="crew-pct-val">40%</div></div>
-          <div class="crew-card"><div class="crew-name">Boris (GPT)</div><div class="crew-pct-val">25%</div></div>
-          <div class="crew-card"><div class="crew-name">Masha (Recraft)</div><div class="crew-pct-val">20%</div></div>
-          <div class="crew-card"><div class="crew-name">Ivan (FLUX)</div><div class="crew-pct-val">15%</div></div>
+          <div class="crew-card"><div class="crew-name">Goldy (Claude)</div><div class="crew-pct-val">$${(Number(stats.estimatedMonthlyCost || 0) * 0.40).toFixed(2)}</div></div>
+          <div class="crew-card"><div class="crew-name">Boris (GPT)</div><div class="crew-pct-val">$${(Number(stats.estimatedMonthlyCost || 0) * 0.25).toFixed(2)}</div></div>
+          <div class="crew-card"><div class="crew-name">Masha (Recraft)</div><div class="crew-pct-val">$${(Number(stats.estimatedMonthlyCost || 0) * 0.20).toFixed(2)}</div></div>
+          <div class="crew-card"><div class="crew-name">Ivan (FLUX)</div><div class="crew-pct-val">$${(Number(stats.estimatedMonthlyCost || 0) * 0.15).toFixed(2)}</div></div>
         </div>
       </div>
     </div>
