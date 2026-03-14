@@ -74,22 +74,19 @@ Express 5 API server serving both the Goldy Builds chat UI and the builder backe
 - `RECRAFT_API_KEY` — Recraft v3 for SVG logo generation
 - `SECRET_CALLBACK_TOKEN` — optional token to secure the `/callback` endpoint
 
-**Multi-AI Design Pipeline (runs inside every build):**
-All 3 calls run in parallel via `Promise.all()` before Claude assembles the final code:
-1. **GPT-4o** (`OPENAI_API_KEY`) — generates premium CSS styling (design system, color palette, animations)
-2. **FLUX Schnell** (`REPLICATE_API_TOKEN`) — generates a cinematic 16:9 hero background image via Replicate
-3. **Recraft v3** (`RECRAFT_API_KEY`) — generates a vector logo image URL
-Claude then receives all three assets as context and assembles them into the final `index.html`.
-Each AI call fails gracefully (warn log, non-fatal) if its key is missing.
+**Orchestration engine (5-stage sequential pipeline):**
+Claude first outputs a JSON task plan (`[{id, agent, task}]`). A task runner then executes each step sequentially, saving to `BuildState.stageData` after each:
+1. **ANALYZE** (Claude, ≤400 tokens out) — `project_name`, `description`, `files_to_generate`. No code.
+2. **DESIGN** (parallel: GPT-4o CSS ≤1500 tokens, Recraft logo URL, FLUX hero image URL) — all non-fatal; results saved to `stageData`.
+3. **CODE** (Claude, ≤4000 tokens out) — receives compact context: description + file list + CSS class-name summary (not full CSS) + URL strings. Emits `<!-- GOLDY_CSS -->`, `<!-- GOLDY_LOGO -->`, `<!-- GOLDY_HERO -->` placeholders.
+4. **ASSEMBLE** (string-replace, no AI) — injects GPT-4o CSS, Recraft logo `<img>`, FLUX `background-image` URL via placeholder replacement on `index.html`.
+5. **DEPLOY** — same GitHub + Vercel logic as before.
 
-**Build flow (Build New):**
-1. `POST /api/build` — accepts `{idea}`
-2. Quick Claude call (~300 tokens) to get `project_name` + `description` for the design pipeline
-3. `Promise.all()` fires GPT-4o CSS + FLUX image + Recraft logo simultaneously
-4. Full Claude call assembles complete project code with all design assets injected
-5. GitHub API creates a repo and pushes all generated files
-6. Vercel API deploys (direct file upload, SSO protection disabled)
-7. `GET /api/status` — returns build state, live logs, and final URL when done
+`BuildState` now has `stage: string` (current task label) and `stageData: Partial<StageData>` (accumulated results). `GET /api/status` returns `stage` field.
+
+**CSS class-name summary:** After GPT-4o generates CSS, `extractCssClassSummary(css)` runs a regex to extract up to 40 unique class names (max 300 chars). This summary is what Claude CODE receives instead of the full CSS string.
+
+**UI:** `public/landing.html` has been completely rewritten with clean, readable hand-crafted CSS (single `<style>` block). `public/index.html` had Google Fonts `<link>` tags added. No AI-generated CSS on either page.
 
 **Import & Rebuild flow:**
 1. `POST /api/import` — three modes:

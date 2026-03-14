@@ -130,6 +130,34 @@ async function fetchReplitZip(url: string): Promise<Buffer> {
   return Buffer.from(buf);
 }
 
+function extractCssClassSummary(css: string): string {
+  const classes = css.match(/\.[\w-]+(?=[\s,{:])/g) ?? [];
+  const unique = [...new Set(classes)].slice(0, 40);
+  return unique.join(" ").slice(0, 300);
+}
+
+function assembleDesignAssets(
+  outFiles: Record<string, string>,
+  assets: { css: string; heroImageUrl: string; logoSvg: string }
+): Record<string, string> {
+  if (!outFiles["index.html"]) return outFiles;
+  let html = outFiles["index.html"];
+  if (assets.css && html.includes("<!-- GOLDY_CSS -->")) {
+    html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${assets.css}\n</style>`);
+    log("  ✓ Injected GPT-4o CSS into rebuilt project", "info");
+  }
+  if (assets.logoSvg && html.includes("<!-- GOLDY_LOGO -->")) {
+    html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
+    log("  ✓ Injected Recraft logo into rebuilt project", "info");
+  }
+  if (assets.heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
+    html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${assets.heroImageUrl}');background-size:cover;background-position:center;`);
+    log("  ✓ Injected FLUX hero image into rebuilt project", "info");
+  }
+  outFiles["index.html"] = html;
+  return outFiles;
+}
+
 async function callClaudeImport(
   files: Record<string, string>,
   projectHint: string,
@@ -141,19 +169,16 @@ async function callClaudeImport(
   const client = new Anthropic({ apiKey });
 
   const hasAssets = assets && (assets.css || assets.heroImageUrl || assets.logoSvg);
+  const cssClassSummary = assets?.css ? extractCssClassSummary(assets.css) : "";
 
   const assetInstructions = hasAssets
     ? `
-DESIGN ASSETS — integrate these pre-generated assets into the rebuilt HTML:
-${assets.css ? `1. GPT-4o PREMIUM CSS — Insert verbatim inside a <style> tag in <head>. Use the class names it defines (.hero, .navbar, etc.):
-\`\`\`css
-${assets.css.slice(0, 6000)}
-\`\`\`
-` : ""}
-${assets.heroImageUrl ? `2. FLUX HERO IMAGE — Set as hero background: style="background-image: url('${assets.heroImageUrl}'); background-size: cover; background-position: center;"
-` : ""}
-${assets.logoSvg ? `3. RECRAFT LOGO — Place in navbar: <img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">
-` : ""}
+DESIGN SYSTEM — pre-generated assets will be injected after you output the code. Follow these instructions exactly:
+${cssClassSummary ? `1. CSS CLASS NAMES — Use these classes in your HTML (full CSS auto-injected): ${cssClassSummary}
+   In index.html <head>, place the placeholder: <!-- GOLDY_CSS -->` : ""}
+${assets?.logoSvg ? `2. LOGO — In the navbar, place the placeholder: <!-- GOLDY_LOGO -->` : ""}
+${assets?.heroImageUrl ? `3. HERO IMAGE — On the hero element's style attribute, place the placeholder: <!-- GOLDY_HERO -->` : ""}
+Do NOT write your own CSS for the design system classes — the injected CSS handles them.
 `
     : "";
 
@@ -200,7 +225,7 @@ Output format — return ONLY valid JSON, no markdown fences, no explanation:
 
   const response = await client.messages.create({
     model: "claude-opus-4-5",
-    max_tokens: 14000,
+    max_tokens: 4000,
     system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
   });
@@ -229,7 +254,11 @@ async function runImport(
     const spec = await callClaudeImport(files, projectHint, assets);
     const projectName = (spec["project_name"] as string) || "imported-project";
     const description = (spec["description"] as string) || "Imported and rebuilt by Goldy AI";
-    const outFiles = (spec["files"] as Record<string, string>) || {};
+    let outFiles = (spec["files"] as Record<string, string>) || {};
+
+    // Assemble: inject GPT-4o CSS, Recraft logo, FLUX hero image via placeholder replacement
+    log("Assembling design assets into rebuilt project...", "info");
+    outFiles = assembleDesignAssets(outFiles, assets);
 
     log(`Project: "${projectName}"`, "success");
     log(`${description}`, "info");

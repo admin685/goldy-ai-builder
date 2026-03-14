@@ -205,6 +205,30 @@ export async function runDesignPipeline(idea: string, projectName: string): Prom
   return { css, heroImageUrl, logoSvg };
 }
 
+// ── Task plan types ────────────────────────────────────────────────────────
+
+export interface TaskSpec {
+  id: number;
+  agent: string;
+  task: string;
+}
+
+export interface StageData {
+  projectName: string;
+  description: string;
+  fileList: string[];
+  css: string;
+  cssClassSummary: string;
+  heroImageUrl: string;
+  logoUrl: string;
+  files: Record<string, string>;
+  features: string[];
+  repoUrl: string;
+  deployUrl: string;
+  projectId: string;
+  deploymentName: string;
+}
+
 export interface BuildLog {
   ts: number;
   msg: string;
@@ -213,6 +237,8 @@ export interface BuildLog {
 
 export interface BuildState {
   status: "idle" | "building" | "done" | "error";
+  stage: string;
+  stageData: Partial<StageData>;
   logs: BuildLog[];
   result: {
     url?: string;
@@ -228,6 +254,8 @@ export interface BuildState {
 
 export const state: BuildState = {
   status: "idle",
+  stage: "",
+  stageData: {},
   logs: [],
   result: {},
 };
@@ -239,91 +267,13 @@ export function log(msg: string, type: BuildLog["type"] = "info") {
 
 export function resetState(idea: string) {
   state.status = "building";
+  state.stage = "";
+  state.stageData = {};
   state.logs = [];
   state.result = {};
   state.error = undefined;
   state.idea = idea;
   log("Build started — Goldy is thinking...", "info");
-}
-
-// ── Claude: code generation + design asset assembly ───────────────────────
-
-async function callClaude(
-  idea: string,
-  assets?: DesignAssets
-): Promise<Record<string, unknown>> {
-  const apiKey = process.env["ANTHROPIC_API_KEY"];
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-
-  const client = new Anthropic({ apiKey });
-
-  const hasAssets = assets && (assets.css || assets.heroImageUrl || assets.logoSvg);
-
-  const assetInstructions = hasAssets
-    ? `
-DESIGN ASSETS — you have been given pre-generated design assets. You MUST integrate them exactly as described:
-
-${assets.css ? `1. GPT-4o PREMIUM CSS — Insert this verbatim inside a <style> tag in the <head>. Do NOT alter or override it. Build your HTML to use the class names defined in it (.hero, .navbar, etc.):
-\`\`\`css
-${assets.css.slice(0, 6000)}
-\`\`\`
-` : ""}
-${assets.heroImageUrl ? `2. FLUX HERO IMAGE — Use this URL as the hero section's background image. Set it inline: style="background-image: url('${assets.heroImageUrl}')" on the .hero element. Also set background-size: cover; background-position: center;
-` : ""}
-${assets.logoSvg ? `3. RECRAFT LOGO — Place this logo image in the navbar using: <img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;"> inside the .navbar element.
-` : ""}
-IMPORTANT: Do NOT generate default/generic CSS for the hero or navbar — the GPT-4o CSS already handles that. Just wire up the HTML structure to use those classes.
-`
-    : "";
-
-  const systemPrompt = `You are a senior full-stack developer. The user gives you a project idea. You return a complete, deployable project as JSON.
-
-CRITICAL RULES:
-- Generate REAL, working code. Not pseudocode, not placeholders.
-- For webapp and landing types: output ONLY static files (HTML, CSS, JS). Do NOT generate any server-side code, requirements.txt, app.py, or any Python/Node server. These projects must run as static files in a browser.
-- For telegram_bot type: generate Python with python-telegram-bot library.
-- For api type: generate a Node.js Express API with a package.json.
-- Every file must be complete and self-contained.
-- Include a README.md with setup instructions.
-
-For webapp and landing projects specifically:
-- Generate ONE self-contained index.html with all CSS and JS inline (no separate files needed, but you can add them).
-- Make the UI genuinely beautiful: dark theme (#0d1117 background), clean layout, smooth interactions.
-- Use vanilla JS only — no React, no frameworks, no CDN imports.
-- Store data in localStorage where appropriate.
-- The app must work by opening index.html in a browser with no server.
-${assetInstructions}
-Output format — return ONLY valid JSON, no markdown fences, no explanation:
-{
-  "project_name": "kebab-case-name",
-  "project_type": "webapp",
-  "tech_stack": "HTML/CSS/JavaScript",
-  "description": "One sentence description",
-  "features": ["Feature 1", "Feature 2", "Feature 3", "Feature 4"],
-  "files": {
-    "index.html": "<!DOCTYPE html>... complete file ...",
-    "README.md": "# Project Name\\n..."
-  }
-}`;
-
-  log("Claude: assembling final project with all design assets...", "info");
-
-  const response = await client.messages.create({
-    model: "claude-opus-4-5",
-    max_tokens: 14000,
-    system: systemPrompt,
-    messages: [{ role: "user", content: idea }],
-  });
-
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Claude did not return valid JSON");
-
-  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-  log(`Project type: ${parsed["project_type"] as string} — ${parsed["tech_stack"] as string}`, "info");
-  return parsed;
 }
 
 // ── GitHub functions ───────────────────────────────────────────────────────
@@ -552,86 +502,410 @@ export async function deployToVercel(
   };
 }
 
-// ── Main build orchestration ───────────────────────────────────────────────
+// ── Orchestration engine ───────────────────────────────────────────────────
+
+const DEFAULT_TASK_PLAN: TaskSpec[] = [
+  { id: 1, agent: "claude",  task: "analyze"       },
+  { id: 2, agent: "gpt4o",   task: "css"           },
+  { id: 3, agent: "recraft", task: "logo"          },
+  { id: 4, agent: "flux",    task: "image"         },
+  { id: 5, agent: "claude",  task: "code"          },
+  { id: 6, agent: "deploy",  task: "github+vercel" },
+];
+
+function extractCssClassSummary(css: string): string {
+  const classes = css.match(/\.[\w-]+(?=[\s,{:])/g) ?? [];
+  const unique = [...new Set(classes)].slice(0, 40);
+  return unique.join(" ").slice(0, 300);
+}
+
+async function getTaskPlanFromClaude(idea: string): Promise<TaskSpec[]> {
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey) return DEFAULT_TASK_PLAN;
+
+  const client = new Anthropic({ apiKey });
+  try {
+    const res = await client.messages.create({
+      model: "claude-opus-4-5",
+      max_tokens: 400,
+      system: `You are a build orchestrator. Output ONLY a JSON array of task steps to build a web project.
+Each item: {"id": number, "agent": string, "task": string}
+Agents available: "claude" (analyze/code), "gpt4o" (css), "recraft" (logo), "flux" (image), "deploy" (github+vercel).
+Standard plan: [{"id":1,"agent":"claude","task":"analyze"},{"id":2,"agent":"gpt4o","task":"css"},{"id":3,"agent":"recraft","task":"logo"},{"id":4,"agent":"flux","task":"image"},{"id":5,"agent":"claude","task":"code"},{"id":6,"agent":"deploy","task":"github+vercel"}]
+Output ONLY the JSON array. No explanation.`,
+      messages: [{ role: "user", content: `Project idea: ${idea}` }],
+    });
+    const text = res.content[0].type === "text" ? res.content[0].text : "";
+    const match = text.match(/\[[\s\S]*\]/);
+    if (match) {
+      const plan = JSON.parse(match[0]) as TaskSpec[];
+      if (Array.isArray(plan) && plan.length > 0) return plan;
+    }
+  } catch (e) {
+    log(`Orchestrator plan failed, using default: ${(e as Error).message}`, "warn");
+  }
+  return DEFAULT_TASK_PLAN;
+}
+
+// ── Task handlers ──────────────────────────────────────────────────────────
+
+async function handleAnalyze(idea: string): Promise<void> {
+  state.stage = "analyze";
+  log("▶ Stage 1: Analyzing your idea...", "info");
+
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+
+  const client = new Anthropic({ apiKey });
+  const res = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 400,
+    system: `Return ONLY a JSON object with exactly three fields:
+- project_name: kebab-case string
+- description: one sentence string
+- files_to_generate: array of filename strings (e.g. ["index.html","README.md"])
+No markdown, no explanation.`,
+    messages: [{ role: "user", content: idea }],
+  });
+
+  const text = res.content[0].type === "text" ? res.content[0].text : "{}";
+  const parsed = JSON.parse(text.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
+    project_name?: string;
+    description?: string;
+    files_to_generate?: string[];
+  };
+
+  state.stageData.projectName = parsed.project_name ?? idea.toLowerCase().replace(/\s+/g, "-").slice(0, 30);
+  state.stageData.description = parsed.description ?? "Built by Goldy AI";
+  state.stageData.fileList = parsed.files_to_generate ?? ["index.html", "README.md"];
+
+  log(`✓ Stage 1 complete — "${state.stageData.projectName}" · ${state.stageData.fileList.length} files planned`, "success");
+}
+
+async function handleGpt4oCSS(idea: string): Promise<void> {
+  state.stage = "design:css";
+  log("▶ Stage 2a: GPT-4o generating premium CSS...", "info");
+
+  const apiKey = process.env["OPENAI_API_KEY"];
+  if (!apiKey) { log("OPENAI_API_KEY not set — skipping CSS generation", "warn"); return; }
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        max_tokens: 1500,
+        messages: [
+          {
+            role: "system",
+            content: `You are a CSS designer. Output ONLY raw CSS — no markdown, no explanation, no backticks.
+Max 1500 tokens. Create a concise design system with:
+- CSS custom properties (:root vars) for colors, fonts, spacing
+- @import for Google Fonts (one font pairing)
+- .navbar, .hero, .btn-primary, .btn-secondary, .card, .footer styles
+- Dark theme, rich accent color matching the project purpose
+- Smooth hover transitions
+- A .hero class with background: var(--hero-bg) support`,
+          },
+          {
+            role: "user",
+            content: `Project: "${state.stageData.projectName ?? "web-app"}"\nDescription: ${idea}\n\nGenerate compact premium CSS.`,
+          },
+        ],
+      }),
+    });
+
+    if (!res.ok) { log(`GPT-4o CSS failed: ${res.status}`, "warn"); return; }
+    const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+    const css = data.choices[0]?.message?.content?.trim() ?? "";
+    state.stageData.css = css;
+    state.stageData.cssClassSummary = extractCssClassSummary(css);
+    log(`✓ Stage 2a complete — CSS ready (${css.length} chars, classes: ${state.stageData.cssClassSummary.slice(0, 80)}...)`, "success");
+  } catch (e) {
+    log(`GPT-4o CSS error: ${(e as Error).message}`, "warn");
+  }
+}
+
+async function handleRecraft(idea: string): Promise<void> {
+  state.stage = "design:logo";
+  log("▶ Stage 2b: Recraft generating logo...", "info");
+
+  const apiKey = process.env["RECRAFT_API_KEY"];
+  if (!apiKey) { log("RECRAFT_API_KEY not set — skipping logo generation", "warn"); return; }
+
+  try {
+    const prompt = `Minimalist modern logo for "${state.stageData.projectName ?? "app"}": ${idea.slice(0, 80)}. Clean geometric design, professional brand mark.`;
+    const res = await fetch("https://external.api.recraft.ai/v1/images/generations", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, style: "vector_illustration", response_format: "url", n: 1 }),
+    });
+
+    if (!res.ok) { log(`Recraft logo failed: ${res.status}`, "warn"); return; }
+    const data = (await res.json()) as { data?: Array<{ url?: string }> };
+    const url = data.data?.[0]?.url ?? "";
+    if (url) {
+      state.stageData.logoUrl = url;
+      log("✓ Stage 2b complete — logo URL ready", "success");
+    } else {
+      log("Recraft: no URL returned", "warn");
+    }
+  } catch (e) {
+    log(`Recraft logo error: ${(e as Error).message}`, "warn");
+  }
+}
+
+async function handleFlux(idea: string): Promise<void> {
+  state.stage = "design:image";
+  log("▶ Stage 2c: FLUX generating hero image...", "info");
+
+  const token = process.env["REPLICATE_API_TOKEN"];
+  if (!token) { log("REPLICATE_API_TOKEN not set — skipping image generation", "warn"); return; }
+
+  try {
+    const prompt = `Professional hero image for a web app: ${idea.slice(0, 120)}. Cinematic lighting, dark atmospheric background, 4k quality, no text, no UI elements.`;
+    const createRes = await fetch("https://api.replicate.com/v1/models/black-forest-labs/flux-schnell/predictions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", Prefer: "wait=30" },
+      body: JSON.stringify({ input: { prompt, num_outputs: 1, aspect_ratio: "16:9", output_format: "webp", output_quality: 80 } }),
+    });
+
+    if (!createRes.ok) { log(`FLUX failed: ${createRes.status}`, "warn"); return; }
+    const prediction = (await createRes.json()) as { id: string; status: string; output?: string[]; urls?: { get: string } };
+
+    let imageUrl = prediction.output?.[0] ?? "";
+    if (!imageUrl && prediction.status !== "succeeded" && prediction.urls?.get) {
+      for (let i = 0; i < 15; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const pollRes = await fetch(prediction.urls.get, { headers: { Authorization: `Bearer ${token}` } });
+        const polled = (await pollRes.json()) as { status: string; output?: string[] };
+        if (polled.status === "succeeded" && polled.output?.[0]) { imageUrl = polled.output[0]; break; }
+        if (polled.status === "failed") break;
+      }
+    }
+
+    if (imageUrl) {
+      state.stageData.heroImageUrl = imageUrl;
+      log("✓ Stage 2c complete — hero image URL ready", "success");
+    } else {
+      log("FLUX: no image URL returned", "warn");
+    }
+  } catch (e) {
+    log(`FLUX error: ${(e as Error).message}`, "warn");
+  }
+}
+
+async function handleCode(idea: string): Promise<void> {
+  state.stage = "code";
+  log("▶ Stage 3: Claude generating project code...", "info");
+
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+
+  const client = new Anthropic({ apiKey });
+  const { projectName = "project", description = idea, fileList = ["index.html", "README.md"], cssClassSummary = "", heroImageUrl = "", logoUrl = "" } = state.stageData;
+
+  const designContext = [
+    cssClassSummary ? `CSS classes available (full CSS will be auto-injected — DO NOT write your own for these): ${cssClassSummary}` : "",
+    `In index.html, place the comment <!-- GOLDY_CSS --> inside <head> where the <style> tag should go.`,
+    logoUrl ? `In the navbar, place: <!-- GOLDY_LOGO --> where the logo image should appear.` : "",
+    heroImageUrl ? `On the hero element, place: <!-- GOLDY_HERO --> as the element's style attribute value.` : "",
+  ].filter(Boolean).join("\n");
+
+  const systemPrompt = `You are a senior full-stack developer. Build a complete, deployable static web project.
+
+CRITICAL RULES:
+- Generate REAL, working code. Not pseudocode, not placeholders.
+- Output ONLY static files (HTML, CSS, JS). No server-side code.
+- Use vanilla JS only — no React, no frameworks, no CDN imports.
+- Store data in localStorage where appropriate.
+- The app must work by opening index.html in a browser with no server.
+- Make the UI genuinely beautiful: dark theme (#0d1117 background), gold accents (#FFD700), clean layout.
+
+DESIGN SYSTEM (injection — read carefully):
+${designContext}
+
+Output format — return ONLY valid JSON, no markdown fences, no explanation:
+{
+  "project_name": "kebab-case-name",
+  "project_type": "webapp",
+  "tech_stack": "HTML/CSS/JavaScript",
+  "description": "One sentence description",
+  "features": ["Feature 1", "Feature 2", "Feature 3"],
+  "files": {
+    "index.html": "<!DOCTYPE html>... complete file with <!-- GOLDY_CSS --> in head ...",
+    "README.md": "# Project Name\\n..."
+  }
+}`;
+
+  const userContent = `Project: "${projectName}"\nDescription: ${description}\nFiles to generate: ${fileList.join(", ")}\n\nIdea: ${idea}`;
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 4000,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userContent }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Claude did not return valid JSON in CODE stage");
+
+  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  state.stageData.files = (parsed["files"] as Record<string, string>) ?? {};
+  state.stageData.features = (parsed["features"] as string[]) ?? [];
+  state.stageData.projectName = (parsed["project_name"] as string) || projectName;
+  state.stageData.description = (parsed["description"] as string) || description;
+
+  log(`✓ Stage 3 complete — ${Object.keys(state.stageData.files).length} files generated`, "success");
+}
+
+function handleAssemble(): void {
+  state.stage = "assemble";
+  log("▶ Stage 4: Assembling design assets...", "info");
+
+  const files = state.stageData.files ?? {};
+  const css = state.stageData.css ?? "";
+  const logoUrl = state.stageData.logoUrl ?? "";
+  const heroImageUrl = state.stageData.heroImageUrl ?? "";
+
+  if (!files["index.html"]) {
+    log("No index.html to assemble — skipping", "warn");
+    return;
+  }
+
+  let html = files["index.html"];
+
+  if (css && html.includes("<!-- GOLDY_CSS -->")) {
+    html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${css}\n</style>`);
+    log("  ✓ Injected GPT-4o CSS", "info");
+  }
+
+  if (logoUrl && html.includes("<!-- GOLDY_LOGO -->")) {
+    html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${logoUrl}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
+    log("  ✓ Injected Recraft logo", "info");
+  }
+
+  if (heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
+    html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${heroImageUrl}');background-size:cover;background-position:center;`);
+    log("  ✓ Injected FLUX hero image", "info");
+  }
+
+  files["index.html"] = html;
+  state.stageData.files = files;
+  log("✓ Stage 4 complete — design assets assembled", "success");
+}
+
+async function handleDeploy(): Promise<void> {
+  state.stage = "deploy";
+  log("▶ Stage 5: Deploying to GitHub + Vercel...", "info");
+
+  const files = state.stageData.files ?? {};
+  const projectName = state.stageData.projectName ?? "goldy-project";
+  const description = state.stageData.description ?? "Built by Goldy AI";
+
+  let repoUrl = "";
+  let deployUrl = "";
+  let projectId = "";
+  let deploymentName = "";
+
+  if (process.env["GITHUB_TOKEN"]) {
+    try {
+      const ghResult = await createGitHubRepo(projectName, description);
+      repoUrl = ghResult.repoUrl;
+      await pushFilesToGitHub(ghResult.repoName, files);
+      state.stageData.repoUrl = repoUrl;
+    } catch (e) {
+      log(`GitHub failed (non-fatal): ${(e as Error).message}`, "warn");
+    }
+  }
+
+  if (process.env["VERCEL_TOKEN"]) {
+    try {
+      const vercelResult = await deployToVercel(projectName, files);
+      deployUrl = vercelResult.url;
+      projectId = vercelResult.projectId;
+      deploymentName = vercelResult.deploymentName;
+      state.stageData.deployUrl = deployUrl;
+      state.stageData.projectId = projectId;
+      state.stageData.deploymentName = deploymentName;
+    } catch (e) {
+      log(`Vercel deployment failed: ${(e as Error).message}`, "error");
+      if (!repoUrl) throw e;
+      log("Project code is saved to GitHub", "info");
+    }
+  } else {
+    log("VERCEL_TOKEN not set — skipping deployment", "warn");
+  }
+
+  log(`✓ Stage 5 complete — build done!`, "success");
+  if (deployUrl) log(`Live at: ${deployUrl}`, "success");
+  else if (repoUrl) log(`Code at: ${repoUrl}`, "success");
+}
+
+async function runTaskPlan(plan: TaskSpec[], idea: string): Promise<void> {
+  for (const task of plan) {
+    const label = `[${task.agent}:${task.task}]`;
+    try {
+      if (task.agent === "claude" && task.task === "analyze") {
+        await handleAnalyze(idea);
+      } else if (task.agent === "gpt4o" && task.task === "css") {
+        await handleGpt4oCSS(idea);
+      } else if (task.agent === "recraft" && task.task === "logo") {
+        await handleRecraft(idea);
+      } else if (task.agent === "flux" && task.task === "image") {
+        await handleFlux(idea);
+      } else if (task.agent === "claude" && task.task === "code") {
+        await handleCode(idea);
+        handleAssemble();
+      } else if (task.agent === "deploy") {
+        await handleDeploy();
+      } else {
+        log(`Unknown task ${label} — skipping`, "warn");
+      }
+    } catch (e) {
+      const isDesign = ["gpt4o", "recraft", "flux"].includes(task.agent);
+      if (isDesign) {
+        log(`${label} failed (non-fatal): ${(e as Error).message}`, "warn");
+      } else {
+        throw e;
+      }
+    }
+  }
+}
 
 async function runBuild(idea: string) {
   try {
-    // Step 1: Quick spec call to get project_name for the design pipeline
-    log("Getting project details from Claude...", "info");
-    const anthropic = new Anthropic({ apiKey: process.env["ANTHROPIC_API_KEY"] ?? "" });
-    const quickRes = await anthropic.messages.create({
-      model: "claude-opus-4-5",
-      max_tokens: 300,
-      system: "Return ONLY a JSON object with two fields: project_name (kebab-case) and description (one sentence). No markdown, no explanation.",
-      messages: [{ role: "user", content: idea }],
-    });
-    const quickText = quickRes.content[0].type === "text" ? quickRes.content[0].text : "{}";
-    const quickJson = JSON.parse(quickText.match(/\{[\s\S]*\}/)?.[0] ?? "{}") as {
-      project_name?: string;
-      description?: string;
-    };
-    const earlyName = quickJson.project_name ?? idea.toLowerCase().replace(/\s+/g, "-").slice(0, 30);
-    const earlyDesc = quickJson.description ?? "Built by Goldy AI";
-    log(`Project: "${earlyName}"`, "success");
+    log("🤖 Claude is planning your build...", "info");
+    const plan = await getTaskPlanFromClaude(idea);
+    log(`Task plan: ${plan.map((t) => `${t.agent}:${t.task}`).join(" → ")}`, "info");
 
-    // Step 2: Run design pipeline in parallel (GPT-4o CSS + FLUX image + Recraft logo)
-    const assets = await runDesignPipeline(idea, earlyName);
+    await runTaskPlan(plan, idea);
 
-    // Step 3: Claude assembles full code with all design assets injected
-    const spec = await callClaude(idea, assets);
-    const projectName = (spec["project_name"] as string) || earlyName;
-    const description = (spec["description"] as string) || earlyDesc;
-    const files = (spec["files"] as Record<string, string>) || {};
-    const features = (spec["features"] as string[]) || [];
+    const files = state.stageData.files ?? {};
+    const projectName = state.stageData.projectName ?? "project";
+    const features = state.stageData.features ?? [];
+    const deployUrl = state.stageData.deployUrl ?? "";
+    const repoUrl = state.stageData.repoUrl ?? "";
 
-    log(`${description}`, "info");
-    log(`Features: ${features.slice(0, 3).join(" · ")}`, "info");
-
-    let repoUrl = "";
-    let deployUrl = "";
-    let projectId = "";
-    let deploymentName = "";
-
-    if (process.env["GITHUB_TOKEN"]) {
-      try {
-        const ghResult = await createGitHubRepo(projectName, description);
-        repoUrl = ghResult.repoUrl;
-        await pushFilesToGitHub(ghResult.repoName, files);
-      } catch (e) {
-        log(`GitHub failed (non-fatal): ${(e as Error).message}`, "warn");
-      }
-    }
-
-    if (process.env["VERCEL_TOKEN"]) {
-      try {
-        const vercelResult = await deployToVercel(projectName, files);
-        deployUrl = vercelResult.url;
-        projectId = vercelResult.projectId;
-        deploymentName = vercelResult.deploymentName;
-      } catch (e) {
-        log(`Vercel deployment failed: ${(e as Error).message}`, "error");
-        if (!repoUrl) throw e;
-        log("Project code is saved to GitHub", "info");
-      }
-    } else {
-      log("VERCEL_TOKEN not set — skipping deployment", "warn");
-    }
+    if (features.length) log(`Features: ${features.slice(0, 3).join(" · ")}`, "info");
 
     state.status = "done";
+    state.stage = "done";
     state.result = {
       url: deployUrl || repoUrl || undefined,
       repoUrl: repoUrl || undefined,
       projectName,
       filesCreated: Object.keys(files).length,
-      projectId: projectId || undefined,
-      deploymentName: deploymentName || undefined,
+      projectId: state.stageData.projectId ?? undefined,
+      deploymentName: state.stageData.deploymentName ?? undefined,
     };
 
     log(`Build complete! ${Object.keys(files).length} files created.`, "success");
-    if (deployUrl) log(`Live at: ${deployUrl}`, "success");
-    else if (repoUrl) log(`Code at: ${repoUrl}`, "success");
   } catch (err) {
     state.status = "error";
+    state.stage = "error";
     state.error = (err as Error).message;
     log(`Build failed: ${(err as Error).message}`, "error");
   }
@@ -660,6 +934,7 @@ router.post("/build", (req, res) => {
 router.get("/status", (_req, res) => {
   res.json({
     status: state.status,
+    stage: state.stage,
     logs: state.logs,
     result: state.result,
     error: state.error,
