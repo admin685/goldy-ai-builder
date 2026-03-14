@@ -459,12 +459,10 @@
     hideOverlay();
     setStatus('previewing');
 
-    // Load the preview URL in the right-panel iframe
-    const previewUrl = result.previewUrl;
-    if (previewUrl) {
-      document.getElementById('preview-frame').src = previewUrl;
-      document.getElementById('url-pill').textContent = '👁 ' + previewUrl.replace('https://', '');
-    }
+    // Load the pending preview from DB (shows unsaved edited files)
+    const pendingPreviewUrl = `${API}/preview/${projectId}?pending=1`;
+    document.getElementById('preview-frame').src = pendingPreviewUrl;
+    document.getElementById('url-pill').textContent = '👁 Preview (pending)';
 
     // Inject the decision card into the chat
     const histEl = document.getElementById('chat-history');
@@ -476,9 +474,7 @@
     card.id = 'preview-decision-card';
     card.innerHTML = `
       <div class="bubble-role">⚒️ Goldy</div>
-      <p>Here's your preview — take a look at the site on the right.<br>
-      ${previewUrl ? `<a href="${escHtml(previewUrl)}" target="_blank" rel="noopener">Open preview in new tab ↗</a>` : ''}
-      </p>
+      <p>Here's your preview — take a look at the site on the right.</p>
       <div class="preview-actions">
         <button class="action-btn deploy" id="btn-deploy" onclick="onDeploy()">✅ Looks good — Deploy to goldy.team</button>
         <button class="action-btn discard" id="btn-discard" onclick="onDiscard()">❌ Try again</button>

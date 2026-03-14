@@ -230,6 +230,29 @@ async function runConfirm(s: EditState): Promise<void> {
 
 // ── Preview route — serve HTML from DB (no auth, used by iframe) ──────────
 
+function findHtmlContent(files: Record<string, string>): string | null {
+  const htmlKey = Object.keys(files).find(k => k === "index.html")
+    || Object.keys(files).find(k => k.endsWith(".html"));
+  return htmlKey ? files[htmlKey] : null;
+}
+
+function parseFilesJson(raw: string): Record<string, string> | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      const files: Record<string, string> = {};
+      for (const f of parsed) files[f.path || f.name] = f.content;
+      return files;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+const PLACEHOLDER_HTML = (msg: string) =>
+  `<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>${msg}</p></body></html>`;
+
 router.get("/preview/:projectId", async (req, res) => {
   const projectId = Number(req.params["projectId"]);
   if (!projectId) {
@@ -237,52 +260,35 @@ router.get("/preview/:projectId", async (req, res) => {
     return;
   }
 
+  res.setHeader("Content-Type", "text/html");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
   try {
+    const pending = req.query["pending"] === "1";
+    if (pending) {
+      const s = editStates.get(projectId);
+      if (s?.pendingFiles) {
+        const html = findHtmlContent(s.pendingFiles);
+        if (html) { res.send(html); return; }
+      }
+    }
+
     const project = await queryOne<{ files_json: string | null }>(
       "SELECT files_json FROM projects WHERE id = $1",
       [projectId]
     );
 
-    if (!project) {
-      res.status(404).send("Project not found");
-      return;
-    }
+    if (!project) { res.status(404).send("Project not found"); return; }
+    if (!project.files_json) { res.send(PLACEHOLDER_HTML("No files yet — send an edit to get started.")); return; }
 
-    if (!project.files_json) {
-      res.setHeader("Content-Type", "text/html");
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
-      res.send("<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>No files yet — send an edit to get started.</p></body></html>");
-      return;
-    }
+    const files = parseFilesJson(project.files_json);
+    if (!files) { res.status(500).send("Failed to parse project files"); return; }
 
-    let files: Record<string, string>;
-    try {
-      const parsed = JSON.parse(project.files_json);
-      if (Array.isArray(parsed)) {
-        files = {};
-        for (const f of parsed) files[f.path || f.name] = f.content;
-      } else {
-        files = parsed;
-      }
-    } catch {
-      res.status(500).send("Failed to parse project files");
-      return;
-    }
+    const html = findHtmlContent(files);
+    if (!html) { res.send(PLACEHOLDER_HTML("No HTML file found in this project.")); return; }
 
-    const htmlKey = Object.keys(files).find(k => k === "index.html")
-      || Object.keys(files).find(k => k.endsWith(".html"));
-
-    if (!htmlKey) {
-      res.setHeader("Content-Type", "text/html");
-      res.setHeader("X-Frame-Options", "SAMEORIGIN");
-      res.send("<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>No HTML file found in this project.</p></body></html>");
-      return;
-    }
-
-    res.setHeader("Content-Type", "text/html");
-    res.setHeader("X-Frame-Options", "SAMEORIGIN");
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.send(files[htmlKey]);
+    res.send(html);
   } catch (e) {
     console.error("Preview route error:", e);
     res.status(500).send("Server error");
