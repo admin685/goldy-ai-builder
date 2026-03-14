@@ -142,7 +142,7 @@ async function createGitHubRepo(
       name: repoName,
       private: false,
       description,
-      auto_init: false,
+      auto_init: true,
     }),
   });
 
@@ -166,7 +166,34 @@ async function pushFilesToGitHub(
   const username = await getGitHubUsername(token);
   log(`Pushing ${Object.keys(files).length} files to GitHub...`, "info");
 
+  // Wait for GitHub to initialise the default branch after auto_init
+  await new Promise((r) => setTimeout(r, 3000));
+
   for (const [filePath, content] of Object.entries(files)) {
+    // Get SHA of existing file (auto_init creates a README.md we must overwrite)
+    let existingSha: string | undefined;
+    try {
+      const checkRes = await fetch(
+        `https://api.github.com/repos/${username}/${repoName}/contents/${filePath}`,
+        {
+          headers: {
+            Authorization: `token ${token}`,
+            "User-Agent": "Goldy-Builder/1.0",
+          },
+        }
+      );
+      if (checkRes.ok) {
+        const existing = (await checkRes.json()) as { sha?: string };
+        existingSha = existing.sha;
+      }
+    } catch { /* file doesn't exist yet, that's fine */ }
+
+    const putBody: Record<string, string> = {
+      message: `Add ${filePath}`,
+      content: Buffer.from(content).toString("base64"),
+    };
+    if (existingSha) putBody["sha"] = existingSha;
+
     const putRes = await fetch(
       `https://api.github.com/repos/${username}/${repoName}/contents/${filePath}`,
       {
@@ -176,10 +203,7 @@ async function pushFilesToGitHub(
           "Content-Type": "application/json",
           "User-Agent": "Goldy-Builder/1.0",
         },
-        body: JSON.stringify({
-          message: `Add ${filePath}`,
-          content: Buffer.from(content).toString("base64"),
-        }),
+        body: JSON.stringify(putBody),
       }
     );
 
@@ -280,6 +304,20 @@ async function deployToVercel(
     projectId: string;
     name: string;
   };
+
+  // Disable Vercel deployment protection so the URL is publicly accessible
+  try {
+    await fetch(`https://api.vercel.com/v9/projects/${data.projectId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ ssoProtection: null }),
+    });
+  } catch {
+    // Non-fatal — project may already be public
+  }
 
   const deployUrl = `https://${data.url}`;
   log(`Deployed to Vercel: ${deployUrl}`, "success");
