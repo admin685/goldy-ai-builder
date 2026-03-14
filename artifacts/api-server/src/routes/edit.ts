@@ -76,12 +76,13 @@ Apply the user's requested changes and return ALL project files (including uncha
 
 RULES (follow exactly):
 - Output ONLY valid JSON — no markdown fences, no backticks, no explanation.
-- Return every file, even if unchanged — the full set replaces what's in the database.
-- Keep all CSS and JS inline inside index.html — no external files or CDN links.
-- Only change what the user asked for; preserve all other styling and functionality.
+- Return EVERY file that exists in the project, even if unchanged — the full set replaces what's in the database.
+- Split into proper files: index.html, style.css, script.js, plus any additional pages needed (about.html, contact.html, etc.). If the project currently has separate CSS/JS files, keep that structure.
+- Only change what the user asked for; preserve all other styling, content, and functionality.
+- Write complete file contents — no truncation, no placeholder comments.
 
 Return ONLY this JSON structure (start with { end with }, nothing else):
-{"files":{"index.html":"...complete updated file...","README.md":"..."}}`;
+{"files":{"index.html":"...complete file...","style.css":"...complete CSS...","script.js":"...complete JS...","README.md":"..."}}`;
 
     const userContent = `Current project files:\n${JSON.stringify(files, null, 2)}\n\nInstruction: ${instruction}`;
 
@@ -89,7 +90,7 @@ Return ONLY this JSON structure (start with { end with }, nothing else):
 
     const response = await client.messages.create({
       model: "claude-opus-4-5",
-      max_tokens: 12000,
+      max_tokens: 20000,
       system: systemPrompt,
       messages: [{ role: "user", content: userContent }],
     });

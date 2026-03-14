@@ -593,11 +593,11 @@ async function handleAnalyze(idea: string): Promise<void> {
   const client = new Anthropic({ apiKey });
   const res = await client.messages.create({
     model: "claude-opus-4-5",
-    max_tokens: 400,
+    max_tokens: 600,
     system: `Return ONLY a JSON object with exactly three fields:
 - project_name: kebab-case string
 - description: one sentence string
-- files_to_generate: array of filename strings (e.g. ["index.html","README.md"])
+- files_to_generate: array of filenames — always split into index.html, style.css, script.js plus any extra HTML pages needed (e.g. about.html, menu.html, contact.html). Always include README.md. Example: ["index.html","style.css","script.js","about.html","contact.html","README.md"]
 No markdown, no explanation.`,
     messages: [{ role: "user", content: idea }],
   });
@@ -741,6 +741,88 @@ async function handleFlux(idea: string): Promise<void> {
   }
 }
 
+// Generate one file at a time — avoids token-limit truncation on multi-page sites
+async function generateSingleFile(
+  filename: string,
+  projectName: string,
+  description: string,
+  allPageNames: string[],
+  generatedSoFar: Record<string, string>,
+  idea: string,
+  designHints: string,
+  client: Anthropic
+): Promise<string> {
+  const ext = filename.split(".").pop() ?? "";
+
+  // Summarise already-generated files as context (cap each at 3000 chars to stay in budget)
+  const context = Object.entries(generatedSoFar)
+    .map(([f, c]) => `=== ${f} ===\n${c.length > 3000 ? c.slice(0, 3000) + "\n...(truncated)" : c}`)
+    .join("\n\n");
+
+  const navLinks = allPageNames
+    .filter(f => f.endsWith(".html"))
+    .map(f => {
+      const label = f.replace(".html", "").replace(/-/g, " ");
+      return `<a href="${f}">${label.charAt(0).toUpperCase() + label.slice(1)}</a>`;
+    })
+    .join(" | ");
+
+  let fileInstructions = "";
+  if (ext === "css") {
+    fileInstructions = `Generate a complete, beautiful stylesheet.
+- Clean modern design: consistent spacing, typography, color palette.
+- Include styles for: nav, hero, sections, cards, footer, buttons, forms.
+- Mobile-responsive with media queries.
+- ${designHints}
+Return ONLY the CSS. No markdown fences.`;
+  } else if (ext === "js") {
+    fileInstructions = `Generate complete shared JavaScript.
+- Mobile hamburger menu toggle, smooth scroll, active nav highlighting.
+- Any interactive features the project needs.
+Return ONLY the JS. No markdown fences.`;
+  } else if (ext === "html") {
+    const isIndex = filename === "index.html";
+    fileInstructions = `Generate a complete HTML page for "${filename}".
+- Link stylesheet: <link rel="stylesheet" href="style.css">
+- Link script at end of body: <script src="script.js"></script>
+- Nav must link to ALL pages: ${navLinks}
+- ${isIndex ? designHints : ""}
+- Fill with real, meaningful content — no placeholder text.
+Return ONLY the HTML. No markdown fences.`;
+  } else {
+    fileInstructions = `Generate the complete content for "${filename}". Return ONLY the file content. No markdown fences.`;
+  }
+
+  const system = `You are a senior web developer generating "${filename}" for a website project.
+Return ONLY the raw file content — no explanation, no markdown fences, no preamble.`;
+
+  const user = `Project: "${projectName}"
+Description: ${description}
+All files in this project: ${allPageNames.join(", ")}
+
+${context ? `Already generated:\n${context}\n` : ""}
+Instructions for ${filename}:
+${fileInstructions}
+
+Original idea: ${idea}`;
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 8000,
+    system,
+    messages: [{ role: "user", content: user }],
+  });
+
+  const stopReason = response.stop_reason;
+  const tokens = response.usage?.output_tokens ?? "?";
+  console.log(`[DIAG] ${filename}: stop_reason=${stopReason} tokens=${tokens}`);
+  log(`  [${filename}] ${tokens} tokens, stop: ${stopReason}`, "info");
+
+  const raw = response.content[0].type === "text" ? response.content[0].text.trim() : "";
+  // Strip any accidental markdown fences
+  return raw.replace(/^```[\w]*\n?/m, "").replace(/\n?```$/m, "").trim();
+}
+
 async function handleCode(idea: string): Promise<void> {
   state.stage = "code";
   log("▶ Goldy is building the structure...", "info");
@@ -749,68 +831,50 @@ async function handleCode(idea: string): Promise<void> {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
 
   const client = new Anthropic({ apiKey });
-  const { projectName = "project", description = idea, fileList = ["index.html", "README.md"], cssClassSummary = "", heroImageUrl = "", logoUrl = "" } = state.stageData;
+  const {
+    projectName = "project",
+    description = idea,
+    fileList: rawFileList,
+    cssClassSummary = "",
+    heroImageUrl = "",
+    logoUrl = "",
+  } = state.stageData;
 
-  const designContext = [
-    cssClassSummary ? `CSS classes available (full CSS will be auto-injected — DO NOT write your own for these): ${cssClassSummary}` : "",
-    `In index.html, place the comment <!-- GOLDY_CSS --> inside <head> where the <style> tag should go.`,
-    logoUrl ? `In the navbar, place: <!-- GOLDY_LOGO --> where the logo image should appear.` : "",
-    heroImageUrl ? `On the hero element, place: <!-- GOLDY_HERO --> as the element's style attribute value.` : "",
+  // Ensure we always have the core files
+  const baseFiles = ["index.html", "style.css", "script.js", "README.md"];
+  const fileList: string[] = rawFileList?.length
+    ? [...new Set([...rawFileList, ...baseFiles])]
+    : baseFiles;
+
+  // Order: CSS → JS → HTML pages (index.html last so it has nav context) → everything else
+  const ordered = [
+    ...fileList.filter(f => f.endsWith(".css")),
+    ...fileList.filter(f => f.endsWith(".js")),
+    ...fileList.filter(f => f.endsWith(".html") && f !== "index.html"),
+    ...fileList.filter(f => f === "index.html"),
+    ...fileList.filter(f => !f.endsWith(".css") && !f.endsWith(".js") && !f.endsWith(".html")),
+  ];
+
+  const designHints = [
+    cssClassSummary ? `Boris's CSS classes available (will be auto-prepended to style.css): ${cssClassSummary}` : "",
+    logoUrl ? `In the navbar in index.html, place exactly: <!-- GOLDY_LOGO --> where the logo <img> should go.` : "",
+    heroImageUrl ? `On the hero section in index.html, set style attribute to exactly: <!-- GOLDY_HERO -->` : "",
   ].filter(Boolean).join("\n");
 
-  const systemPrompt = `You are a senior web developer. Generate a deployable static website.
+  const generatedFiles: Record<string, string> = {};
 
-RULES (follow exactly):
-- Output ONLY valid JSON — no markdown fences, no backticks, no explanation before or after.
-- Generate EXACTLY 2 files: index.html and README.md. No more.
-- index.html: ONE self-contained file. Inline all CSS in a <style> tag. Inline all JS in a <script> tag. No external CDN.
-- Keep index.html under 350 lines total. Write clean, minimal code — no lorem ipsum filler blocks.
-- Make the UI beautiful: clean layout, great typography, proper spacing.
-
-DESIGN INJECTION (do exactly as instructed):
-${designContext}
-
-Return this JSON structure — start with { and end with }, nothing else:
-{"project_name":"kebab-name","project_type":"webapp","tech_stack":"HTML/CSS/JS","description":"one sentence","features":["feat1","feat2"],"files":{"index.html":"...complete file...","README.md":"# Title\\n..."}}`;
-
-
-  const userContent = `Project: "${projectName}"\nDescription: ${description}\nFiles to generate: ${fileList.join(", ")}\n\nIdea: ${idea}`;
-
-  const response = await client.messages.create({
-    model: "claude-opus-4-5",
-    max_tokens: 12000,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userContent }],
-  });
-
-  const stopReason = response.stop_reason;
-  console.log(`[DIAG] Claude CODE stop_reason: ${stopReason} | output tokens: ${response.usage?.output_tokens ?? "?"}`);
-  log(`[DIAG] Claude CODE stop_reason: ${stopReason} | output tokens: ${response.usage?.output_tokens ?? "?"}`, "info");
-
-  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-  // Strip markdown fences if Claude wrapped in ```json ... ```
-  const text = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) {
-    console.log(`[DIAG] Claude CODE raw output (first 500): ${rawText.slice(0, 500)}`);
-    log(`[DIAG] Claude CODE raw output (first 500): ${rawText.slice(0, 500)}`, "warn");
-    throw new Error("Claude did not return valid JSON in CODE stage");
+  for (const filename of ordered) {
+    log(`  ▶ Writing ${filename}...`, "info");
+    const content = await generateSingleFile(
+      filename, projectName, description, ordered, generatedFiles, idea, designHints, client
+    );
+    generatedFiles[filename] = content;
+    log(`  ✓ ${filename} done (${content.length} chars)`, "success");
   }
 
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-  } catch (parseErr) {
-    console.log(`[DIAG] Claude CODE JSON parse failed. Matched text (first 300): ${jsonMatch[0].slice(0, 300)}`);
-    log(`[DIAG] Claude CODE JSON parse error: ${(parseErr as Error).message}`, "warn");
-    throw new Error(`Claude CODE returned malformed JSON: ${(parseErr as Error).message}`);
-  }
-  state.stageData.files = (parsed["files"] as Record<string, string>) ?? {};
-  state.stageData.features = (parsed["features"] as string[]) ?? [];
-  state.stageData.projectName = (parsed["project_name"] as string) || projectName;
-  state.stageData.description = (parsed["description"] as string) || description;
-
-  log(`✓ Goldy finished building — ${Object.keys(state.stageData.files).length} files ready`, "success");
+  state.stageData.files = generatedFiles;
+  state.stageData.features = [];
+  log(`✓ Goldy finished building — ${Object.keys(generatedFiles).length} files ready`, "success");
 }
 
 function handleAssemble(): void {
@@ -829,14 +893,22 @@ function handleAssemble(): void {
 
   let html = files["index.html"];
 
-  const cssPlaceholderFound = html.includes("<!-- GOLDY_CSS -->");
-  console.log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`);
-  log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`, "info");
-  if (css && cssPlaceholderFound) {
-    html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${css}\n</style>`);
-    log("  ✓ Boris's designs are in", "info");
-  } else if (!cssPlaceholderFound) {
-    log("  ⚠ Boris's spot is missing in the blueprint", "warn");
+  // Inject Boris's CSS — prefer style.css (multi-file projects), fall back to GOLDY_CSS placeholder
+  if (css) {
+    if (files["style.css"] !== undefined) {
+      files["style.css"] = `/* ── Boris's design system ── */\n${css}\n\n/* ── Project styles ── */\n${files["style.css"]}`;
+      log("  ✓ Boris's designs merged into style.css", "info");
+    } else {
+      const cssPlaceholderFound = html.includes("<!-- GOLDY_CSS -->");
+      console.log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`);
+      log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`, "info");
+      if (cssPlaceholderFound) {
+        html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${css}\n</style>`);
+        log("  ✓ Boris's designs injected into index.html", "info");
+      } else {
+        log("  ⚠ Boris's spot is missing in the blueprint", "warn");
+      }
+    }
   }
 
   if (logoUrl && html.includes("<!-- GOLDY_LOGO -->")) {
