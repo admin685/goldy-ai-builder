@@ -228,6 +228,147 @@ async function runConfirm(s: EditState): Promise<void> {
   }
 }
 
+// ── Preview route — serve HTML from DB (no auth, used by iframe) ──────────
+
+router.get("/preview/:projectId", async (req, res) => {
+  const projectId = Number(req.params["projectId"]);
+  if (!projectId) {
+    res.status(400).send("Invalid project ID");
+    return;
+  }
+
+  try {
+    const project = await queryOne<{ files_json: string | null }>(
+      "SELECT files_json FROM projects WHERE id = $1",
+      [projectId]
+    );
+
+    if (!project) {
+      res.status(404).send("Project not found");
+      return;
+    }
+
+    if (!project.files_json) {
+      res.setHeader("Content-Type", "text/html");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.send("<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>No files yet — send an edit to get started.</p></body></html>");
+      return;
+    }
+
+    let files: Record<string, string>;
+    try {
+      const parsed = JSON.parse(project.files_json);
+      if (Array.isArray(parsed)) {
+        files = {};
+        for (const f of parsed) files[f.path || f.name] = f.content;
+      } else {
+        files = parsed;
+      }
+    } catch {
+      res.status(500).send("Failed to parse project files");
+      return;
+    }
+
+    const htmlKey = Object.keys(files).find(k => k === "index.html")
+      || Object.keys(files).find(k => k.endsWith(".html"));
+
+    if (!htmlKey) {
+      res.setHeader("Content-Type", "text/html");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.send("<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>No HTML file found in this project.</p></body></html>");
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/html");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.send(files[htmlKey]);
+  } catch (e) {
+    console.error("Preview route error:", e);
+    res.status(500).send("Server error");
+  }
+});
+
+// ── Deploy route — manual GitHub push + Vercel deploy ─────────────────────
+
+router.post("/deploy/:projectId", requireAuth, async (req, res) => {
+  const projectId = Number(req.params["projectId"]);
+  if (!projectId) {
+    res.status(400).json({ error: "Invalid project ID" });
+    return;
+  }
+
+  try {
+    const project = await queryOne<ProjectRow>(
+      "SELECT id, user_id, name, vercel_url, github_url, files_json FROM projects WHERE id = $1",
+      [projectId]
+    );
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+    if (project.user_id !== req.user!.id && req.user!.role !== "admin") {
+      res.status(403).json({ error: "You don't own this project" });
+      return;
+    }
+    if (!project.files_json) {
+      res.status(400).json({ error: "No files to deploy" });
+      return;
+    }
+
+    let files: Record<string, string>;
+    try {
+      const parsed = JSON.parse(project.files_json);
+      if (Array.isArray(parsed)) {
+        files = {};
+        for (const f of parsed) files[f.path || f.name] = f.content;
+      } else {
+        files = parsed;
+      }
+    } catch {
+      res.status(500).json({ error: "Failed to parse project files" });
+      return;
+    }
+
+    let repoUrl = project.github_url ?? "";
+    let deployUrl = project.vercel_url ?? "";
+
+    if (process.env["GITHUB_TOKEN"]) {
+      try {
+        if (project.github_url) {
+          const repoName = project.github_url.replace(/\/$/, "").split("/").pop()!;
+          await pushFilesToGitHub(repoName, files);
+          repoUrl = project.github_url;
+        }
+      } catch (e) {
+        console.warn("Deploy route: GitHub push failed:", (e as Error).message);
+      }
+    }
+
+    if (process.env["VERCEL_TOKEN"]) {
+      try {
+        const vercelResult = await deployToVercel(project.name, files);
+        deployUrl = vercelResult.customUrl ?? vercelResult.url;
+      } catch (e) {
+        console.warn("Deploy route: Vercel deploy failed:", (e as Error).message);
+      }
+    }
+
+    if (deployUrl !== (project.vercel_url ?? "") || repoUrl !== (project.github_url ?? "")) {
+      await queryOne(
+        "UPDATE projects SET vercel_url = $1, github_url = $2 WHERE id = $3",
+        [deployUrl || null, repoUrl || null, projectId]
+      );
+    }
+
+    res.json({ ok: true, vercelUrl: deployUrl || null, repoUrl: repoUrl || null });
+  } catch (e) {
+    console.error("Deploy route error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ── Routes ────────────────────────────────────────────────────────────────
 
 // POST /edit — start edit pipeline (Claude + preview deploy)

@@ -176,6 +176,14 @@
   /* ── Scrollbar for log feed ── */
   .log-feed::-webkit-scrollbar { width: 3px; }
   .log-feed::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .deploy-btn {
+    font-size: 0.8rem; font-weight: 700; font-family: inherit;
+    background: #34D399; color: #111C1A; border: none; border-radius: 5px;
+    padding: 5px 12px; cursor: pointer; transition: opacity 0.15s;
+  }
+  .deploy-btn:hover { opacity: 0.85; }
+  .deploy-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 </style>
 </head>
 <body>
@@ -188,6 +196,7 @@
   <div class="nav-right">
     <span class="nav-status" id="nav-status">Ready</span>
     <a class="open-btn" id="open-btn" href="#" target="_blank" rel="noopener">Open site ↗</a>
+    <button class="deploy-btn" id="deploy-btn" onclick="manualDeploy()">🚀 Deploy to goldy.team</button>
   </div>
 </nav>
 
@@ -281,14 +290,15 @@
       document.title = `${projectData.name} — Editor`;
       document.getElementById('nav-project').textContent = projectData.name;
 
-      // Set up iframe
+      // Set up iframe — always use DB preview route
+      const previewSrc = `${API}/preview/${projectId}`;
+      originalIframeUrl = previewSrc;
+      document.getElementById('preview-frame').src = previewSrc;
+      document.getElementById('url-pill').textContent = 'DB Preview';
+
       if (projectData.vercel_url) {
-        originalIframeUrl = projectData.vercel_url;
-        document.getElementById('preview-frame').src = projectData.vercel_url;
-        document.getElementById('url-pill').textContent = projectData.vercel_url.replace('https://', '');
         document.getElementById('open-btn').href = projectData.vercel_url;
       } else {
-        document.getElementById('url-pill').textContent = 'No live URL yet';
         document.getElementById('open-btn').style.display = 'none';
       }
 
@@ -526,12 +536,10 @@
     // Remove decision card
     document.getElementById('preview-decision-card')?.remove();
 
-    // Restore original iframe
+    // Restore DB preview iframe
     const frame = document.getElementById('preview-frame');
     frame.src = originalIframeUrl;
-    if (originalIframeUrl) {
-      document.getElementById('url-pill').textContent = originalIframeUrl.replace('https://', '');
-    }
+    document.getElementById('url-pill').textContent = 'DB Preview';
 
     appendBubble('goldy', "No problem — let's try something different. What would you like to change?");
     setStatus('ready');
@@ -548,20 +556,19 @@
 
     const productionUrl = result.productionUrl;
 
-    // Update iframe to production URL
+    // Refresh the DB preview iframe to show latest files
+    refreshIframe();
+
+    // Update open-btn to point to production URL if available
     if (productionUrl) {
       projectData.vercel_url = productionUrl;
-      originalIframeUrl = productionUrl;
-      document.getElementById('url-pill').textContent = productionUrl.replace('https://', '');
       document.getElementById('open-btn').href = productionUrl;
-      document.getElementById('preview-frame').src = productionUrl;
-    } else {
-      refreshIframe();
+      document.getElementById('open-btn').style.display = '';
     }
 
     const msg = productionUrl
       ? `Your changes are live at ${productionUrl}`
-      : 'Your changes have been deployed to production.';
+      : 'Your changes have been saved.';
     appendBubble('goldy', msg);
 
     setStatus('done');
@@ -587,9 +594,43 @@
 
   function refreshIframe() {
     const frame = document.getElementById('preview-frame');
-    const src = frame.src;
     frame.src = '';
-    setTimeout(() => { frame.src = src || (projectData && projectData.vercel_url) || ''; }, 200);
+    setTimeout(() => { frame.src = `${API}/preview/${projectId}`; }, 200);
+  }
+
+  async function manualDeploy() {
+    const btn = document.getElementById('deploy-btn');
+    const origText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '🚀 Deploying…';
+
+    try {
+      const res = await fetch(`${API}/deploy/${projectId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        appendBubble('goldy', '⚠️ Deploy failed: ' + (data.error || 'Unknown error'));
+        btn.disabled = false;
+        btn.textContent = origText;
+        return;
+      }
+
+      if (data.vercelUrl) {
+        projectData.vercel_url = data.vercelUrl;
+        document.getElementById('open-btn').href = data.vercelUrl;
+        document.getElementById('open-btn').style.display = '';
+        appendBubble('goldy', `🚀 Deployed! Live at ${data.vercelUrl}`);
+      } else {
+        appendBubble('goldy', '✓ Deploy completed (no Vercel URL returned).');
+      }
+    } catch (e) {
+      appendBubble('goldy', '⚠️ Network error during deploy');
+    }
+
+    btn.disabled = false;
+    btn.textContent = origText;
   }
 
   // ── Status badge ──────────────────────────────────────────────────────────
