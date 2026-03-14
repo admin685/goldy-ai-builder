@@ -15,11 +15,11 @@ interface DesignAssets {
 async function generateCSSWithGPT(idea: string, projectName: string): Promise<string> {
   const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) {
-    log("OPENAI_API_KEY not set — skipping GPT-4o CSS generation", "warn");
+    log("Boris is off duty — no API key to design the CSS", "warn");
     return "";
   }
 
-  log("GPT-4o: generating premium CSS styling...", "info");
+  log("▶ Boris is designing the interior...", "info");
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -55,7 +55,7 @@ Use CSS custom properties (variables). Create a cohesive design system with:
 
   if (!res.ok) {
     const err = await res.text();
-    log(`GPT-4o CSS generation failed: ${err.slice(0, 200)}`, "warn");
+    log(`Boris hit a wall: ${err.slice(0, 200)}`, "warn");
     return "";
   }
 
@@ -63,18 +63,18 @@ Use CSS custom properties (variables). Create a cohesive design system with:
     choices: Array<{ message: { content: string } }>;
   };
   const css = data.choices[0]?.message?.content?.trim() ?? "";
-  log("GPT-4o: CSS generated successfully ✓", "success");
+  log("✓ Boris finished the interior design", "success");
   return css;
 }
 
 async function generateHeroImageWithFLUX(idea: string): Promise<string> {
   const token = process.env["REPLICATE_API_TOKEN"];
   if (!token) {
-    log("REPLICATE_API_TOKEN not set — skipping FLUX image generation", "warn");
+    log("Ivan is off duty — no API key for site photos", "warn");
     return "";
   }
 
-  log("FLUX: generating hero image...", "info");
+  log("▶ Ivan is taking photos of the site...", "info");
 
   const prompt = `Professional hero image for a web app: ${idea}. Cinematic lighting, modern UI aesthetic, dark atmospheric background, photorealistic, 4k quality, no text, no UI elements.`;
 
@@ -98,7 +98,7 @@ async function generateHeroImageWithFLUX(idea: string): Promise<string> {
 
   if (!createRes.ok) {
     const err = await createRes.text();
-    log(`FLUX image generation failed: ${err.slice(0, 200)}`, "warn");
+    log(`Ivan dropped his camera: ${err.slice(0, 200)}`, "warn");
     return "";
   }
 
@@ -121,31 +121,31 @@ async function generateHeroImageWithFLUX(idea: string): Promise<string> {
         output?: string[];
       };
       if (polled.status === "succeeded" && polled.output?.[0]) {
-        log("FLUX: hero image generated successfully ✓", "success");
+        log("✓ Ivan got the perfect shot", "success");
         return polled.output[0];
       }
       if (polled.status === "failed") {
-        log("FLUX: image generation failed", "warn");
+        log("Ivan's camera failed — moving on", "warn");
         return "";
       }
     }
-    log("FLUX: image generation timed out", "warn");
+    log("Ivan's shoot ran too long — moving on", "warn");
     return "";
   }
 
   const imageUrl = prediction.output?.[0] ?? "";
-  if (imageUrl) log("FLUX: hero image generated successfully ✓", "success");
+  if (imageUrl) log("✓ Ivan got the perfect shot", "success");
   return imageUrl;
 }
 
 async function generateLogoWithRecraft(projectName: string, idea: string): Promise<string> {
   const apiKey = process.env["RECRAFT_API_KEY"];
   if (!apiKey) {
-    log("RECRAFT_API_KEY not set — skipping Recraft logo generation", "warn");
+    log("Masha is off duty — no API key for the artwork", "warn");
     return "";
   }
 
-  log("Recraft: generating SVG logo...", "info");
+  log("▶ Masha is painting the logo...", "info");
 
   const prompt = `Minimalist modern SVG logo for "${projectName}": ${idea.slice(0, 100)}. Clean geometric design, single color, professional brand mark.`;
 
@@ -165,7 +165,7 @@ async function generateLogoWithRecraft(projectName: string, idea: string): Promi
 
   if (!res.ok) {
     const err = await res.text();
-    log(`Recraft logo generation failed: ${err.slice(0, 200)}`, "warn");
+    log(`Masha spilled the paint: ${err.slice(0, 200)}`, "warn");
     return "";
   }
 
@@ -175,33 +175,33 @@ async function generateLogoWithRecraft(projectName: string, idea: string): Promi
 
   const imageUrl = data.data?.[0]?.url ?? "";
   if (imageUrl) {
-    log("Recraft: logo generated successfully ✓", "success");
+    log("✓ Masha finished the logo", "success");
     return imageUrl;
   }
 
-  log("Recraft: no image URL returned", "warn");
+  log("Masha's canvas came back blank", "warn");
   return "";
 }
 
 export async function runDesignPipeline(idea: string, projectName: string): Promise<DesignAssets> {
-  log("Launching parallel design pipeline (GPT-4o + FLUX + Recraft)...", "info");
+  log("▶ Boris, Ivan, and Masha are starting their work...", "info");
 
   const [css, heroImageUrl, logoSvg] = await Promise.all([
     generateCSSWithGPT(idea, projectName).catch((e) => {
-      log(`GPT-4o CSS error: ${(e as Error).message}`, "warn");
+      log(`Boris had an issue: ${(e as Error).message}`, "warn");
       return "";
     }),
     generateHeroImageWithFLUX(idea).catch((e) => {
-      log(`FLUX image error: ${(e as Error).message}`, "warn");
+      log(`Ivan had an issue: ${(e as Error).message}`, "warn");
       return "";
     }),
     generateLogoWithRecraft(projectName, idea).catch((e) => {
-      log(`Recraft logo error: ${(e as Error).message}`, "warn");
+      log(`Masha had an issue: ${(e as Error).message}`, "warn");
       return "";
     }),
   ]);
 
-  log("Design pipeline complete — handing assets to Claude for assembly...", "success");
+  log("✓ Crew handed everything to Goldy for assembly", "success");
   return { css, heroImageUrl, logoSvg };
 }
 
@@ -273,7 +273,7 @@ export function resetState(idea: string) {
   state.result = {};
   state.error = undefined;
   state.idea = idea;
-  log("Build started — Goldy is thinking...", "info");
+  log("▶ Goldy is reviewing the blueprints...", "info");
 }
 
 // ── GitHub functions ───────────────────────────────────────────────────────
@@ -302,7 +302,7 @@ export async function createGitHubRepo(
     .slice(0, 12);
   const repoName = `goldy-${projectName}-${ts}`;
 
-  log(`Creating GitHub repository: ${repoName}`, "info");
+  log(`▶ Petya is setting up the warehouse: ${repoName}`, "info");
 
   const res = await fetch("https://api.github.com/user/repos", {
     method: "POST",
@@ -325,7 +325,7 @@ export async function createGitHubRepo(
   }
 
   const data = (await res.json()) as { full_name: string; html_url: string };
-  log(`Repository created: ${data.full_name}`, "success");
+  log(`✓ Petya set up the warehouse: ${data.full_name}`, "success");
   return { repoName, repoUrl: data.html_url };
 }
 
@@ -337,7 +337,7 @@ export async function pushFilesToGitHub(
   if (!token) throw new Error("GITHUB_TOKEN is not set");
 
   const username = await getGitHubUsername(token);
-  log(`Pushing ${Object.keys(files).length} files to GitHub...`, "info");
+  log(`▶ Petya is stacking ${Object.keys(files).length} files in the warehouse...`, "info");
 
   // Wait for GitHub to initialise the default branch after auto_init
   await new Promise((r) => setTimeout(r, 3000));
@@ -382,13 +382,13 @@ export async function pushFilesToGitHub(
 
     if (!putRes.ok) {
       const err = await putRes.text();
-      log(`Warning: failed to push ${filePath}: ${err}`, "warn");
+      log(`Petya couldn't store ${filePath}: ${err}`, "warn");
     } else {
-      log(`  ✓ ${filePath}`, "info");
+      log(`  📦 ${filePath}`, "info");
     }
   }
 
-  log("All files pushed to GitHub", "success");
+  log("✓ Petya packed everything into the warehouse", "success");
 }
 
 // ── Task 1: Vercel direct file upload ─────────────────────────────────────
@@ -433,7 +433,7 @@ export async function deployToVercel(
   const token = process.env["VERCEL_TOKEN"];
   if (!token) throw new Error("VERCEL_TOKEN is not set");
 
-  log("Uploading files to Vercel...", "info");
+  log("▶ Vasya is loading the delivery truck...", "info");
 
   const fileManifest: VercelFile[] = [];
 
@@ -443,7 +443,7 @@ export async function deployToVercel(
     log(`  ↑ ${filePath}`, "info");
   }
 
-  log("Creating Vercel deployment...", "info");
+  log("▶ Vasya is hitting the road...", "info");
 
   const deployName = projectName.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 52);
 
@@ -493,7 +493,7 @@ export async function deployToVercel(
   }
 
   const deployUrl = `https://${data.url}`;
-  log(`Deployed to Vercel: ${deployUrl}`, "success");
+  log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
 
   return {
     url: deployUrl,
@@ -551,7 +551,7 @@ Output ONLY the JSON array. No explanation.`,
 
 async function handleAnalyze(idea: string): Promise<void> {
   state.stage = "analyze";
-  log("▶ Stage 1: Analyzing your idea...", "info");
+  log("▶ Goldy is reviewing the blueprints...", "info");
 
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -579,15 +579,15 @@ No markdown, no explanation.`,
   state.stageData.description = parsed.description ?? "Built by Goldy AI";
   state.stageData.fileList = parsed.files_to_generate ?? ["index.html", "README.md"];
 
-  log(`✓ Stage 1 complete — "${state.stageData.projectName}" · ${state.stageData.fileList.length} files planned`, "success");
+  log(`✓ Goldy has the plan — "${state.stageData.projectName}" · ${state.stageData.fileList.length} files to build`, "success");
 }
 
 async function handleGpt4oCSS(idea: string): Promise<void> {
   state.stage = "design:css";
-  log("▶ Stage 2a: GPT-4o generating premium CSS...", "info");
+  log("▶ Boris is designing the interior...", "info");
 
   const apiKey = process.env["OPENAI_API_KEY"];
-  if (!apiKey) { log("OPENAI_API_KEY not set — skipping CSS generation", "warn"); return; }
+  if (!apiKey) { log("Boris is off duty — no API key, skipping CSS", "warn"); return; }
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -619,24 +619,24 @@ Max 1500 tokens. Create a concise design system with:
     const rawBody = await res.text();
     console.log(`[DIAG] GPT-4o HTTP ${res.status} | first 200 chars: ${rawBody.slice(0, 200)}`);
     log(`[DIAG] GPT-4o HTTP ${res.status}`, res.ok ? "info" : "warn");
-    if (!res.ok) { log(`GPT-4o CSS failed: ${res.status}`, "warn"); return; }
+    if (!res.ok) { log(`Boris couldn't finish — HTTP ${res.status}`, "warn"); return; }
     const data = JSON.parse(rawBody) as { choices: Array<{ message: { content: string } }> };
     const css = data.choices[0]?.message?.content?.trim() ?? "";
     log(`[DIAG] GPT-4o first 200 chars of CSS: ${css.slice(0, 200)}`, "info");
     state.stageData.css = css;
     state.stageData.cssClassSummary = extractCssClassSummary(css);
-    log(`✓ Stage 2a complete — CSS ready (${css.length} chars, classes: ${state.stageData.cssClassSummary.slice(0, 80)}...)`, "success");
+    log(`✓ Boris nailed the interior design (${css.length} chars)`, "success");
   } catch (e) {
-    log(`GPT-4o CSS error: ${(e as Error).message}`, "warn");
+    log(`Boris hit a snag: ${(e as Error).message}`, "warn");
   }
 }
 
 async function handleRecraft(idea: string): Promise<void> {
   state.stage = "design:logo";
-  log("▶ Stage 2b: Recraft generating logo...", "info");
+  log("▶ Masha is painting the logo...", "info");
 
   const apiKey = process.env["RECRAFT_API_KEY"];
-  if (!apiKey) { log("RECRAFT_API_KEY not set — skipping logo generation", "warn"); return; }
+  if (!apiKey) { log("Masha is off duty — no API key, skipping logo", "warn"); return; }
 
   try {
     const prompt = `Minimalist modern logo for "${state.stageData.projectName ?? "app"}": ${idea.slice(0, 80)}. Clean geometric design, professional brand mark.`;
@@ -649,27 +649,27 @@ async function handleRecraft(idea: string): Promise<void> {
     const recraftBody = await res.text();
     console.log(`[DIAG] Recraft HTTP ${res.status} | first 200 chars: ${recraftBody.slice(0, 200)}`);
     log(`[DIAG] Recraft HTTP ${res.status}`, res.ok ? "info" : "warn");
-    if (!res.ok) { log(`Recraft logo failed: ${res.status}`, "warn"); return; }
+    if (!res.ok) { log(`Masha's brush broke — HTTP ${res.status}`, "warn"); return; }
     const data = JSON.parse(recraftBody) as { data?: Array<{ url?: string }> };
     const url = data.data?.[0]?.url ?? "";
     log(`[DIAG] Recraft logo URL (first 200): ${url.slice(0, 200)}`, "info");
     if (url) {
       state.stageData.logoUrl = url;
-      log("✓ Stage 2b complete — logo URL ready", "success");
+      log("✓ Masha's logo is ready", "success");
     } else {
-      log("Recraft: no URL returned", "warn");
+      log("Masha's canvas came back blank", "warn");
     }
   } catch (e) {
-    log(`Recraft logo error: ${(e as Error).message}`, "warn");
+    log(`Masha had a problem: ${(e as Error).message}`, "warn");
   }
 }
 
 async function handleFlux(idea: string): Promise<void> {
   state.stage = "design:image";
-  log("▶ Stage 2c: FLUX generating hero image...", "info");
+  log("▶ Ivan is taking photos of the site...", "info");
 
   const token = process.env["REPLICATE_API_TOKEN"];
-  if (!token) { log("REPLICATE_API_TOKEN not set — skipping image generation", "warn"); return; }
+  if (!token) { log("Ivan is off duty — no API key, skipping photos", "warn"); return; }
 
   try {
     const prompt = `Professional hero image for a web app: ${idea.slice(0, 120)}. Cinematic lighting, dark atmospheric background, 4k quality, no text, no UI elements.`;
@@ -682,7 +682,7 @@ async function handleFlux(idea: string): Promise<void> {
     const fluxBody = await createRes.text();
     console.log(`[DIAG] FLUX HTTP ${createRes.status} | first 200 chars: ${fluxBody.slice(0, 200)}`);
     log(`[DIAG] FLUX HTTP ${createRes.status}`, createRes.ok ? "info" : "warn");
-    if (!createRes.ok) { log(`FLUX failed: ${createRes.status}`, "warn"); return; }
+    if (!createRes.ok) { log(`Ivan dropped his camera — HTTP ${createRes.status}`, "warn"); return; }
     const prediction = JSON.parse(fluxBody) as { id: string; status: string; output?: string[]; urls?: { get: string } };
 
     let imageUrl = prediction.output?.[0] ?? "";
@@ -698,18 +698,18 @@ async function handleFlux(idea: string): Promise<void> {
 
     if (imageUrl) {
       state.stageData.heroImageUrl = imageUrl;
-      log("✓ Stage 2c complete — hero image URL ready", "success");
+      log("✓ Ivan got the perfect shot", "success");
     } else {
-      log("FLUX: no image URL returned", "warn");
+      log("Ivan's film came out blank", "warn");
     }
   } catch (e) {
-    log(`FLUX error: ${(e as Error).message}`, "warn");
+    log(`Ivan had a problem: ${(e as Error).message}`, "warn");
   }
 }
 
 async function handleCode(idea: string): Promise<void> {
   state.stage = "code";
-  log("▶ Stage 3: Claude generating project code...", "info");
+  log("▶ Goldy is building the structure...", "info");
 
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -776,12 +776,12 @@ Return this JSON structure — start with { and end with }, nothing else:
   state.stageData.projectName = (parsed["project_name"] as string) || projectName;
   state.stageData.description = (parsed["description"] as string) || description;
 
-  log(`✓ Stage 3 complete — ${Object.keys(state.stageData.files).length} files generated`, "success");
+  log(`✓ Goldy finished building — ${Object.keys(state.stageData.files).length} files ready`, "success");
 }
 
 function handleAssemble(): void {
   state.stage = "assemble";
-  log("▶ Stage 4: Assembling design assets...", "info");
+  log("▶ Goldy is putting everything together...", "info");
 
   const files = state.stageData.files ?? {};
   const css = state.stageData.css ?? "";
@@ -789,7 +789,7 @@ function handleAssemble(): void {
   const heroImageUrl = state.stageData.heroImageUrl ?? "";
 
   if (!files["index.html"]) {
-    log("No index.html to assemble — skipping", "warn");
+    log("No main page found — Goldy is skipping assembly", "warn");
     return;
   }
 
@@ -800,29 +800,29 @@ function handleAssemble(): void {
   log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`, "info");
   if (css && cssPlaceholderFound) {
     html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${css}\n</style>`);
-    log("  ✓ Injected GPT-4o CSS — placeholder replaced", "info");
+    log("  ✓ Boris's designs are in", "info");
   } else if (!cssPlaceholderFound) {
-    log("  ⚠ GOLDY_CSS placeholder NOT found in index.html", "warn");
+    log("  ⚠ Boris's spot is missing in the blueprint", "warn");
   }
 
   if (logoUrl && html.includes("<!-- GOLDY_LOGO -->")) {
     html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${logoUrl}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
-    log("  ✓ Injected Recraft logo", "info");
+    log("  ✓ Masha's logo is mounted", "info");
   }
 
   if (heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
     html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${heroImageUrl}');background-size:cover;background-position:center;`);
-    log("  ✓ Injected FLUX hero image", "info");
+    log("  ✓ Ivan's photo is framed", "info");
   }
 
   files["index.html"] = html;
   state.stageData.files = files;
-  log("✓ Stage 4 complete — design assets assembled", "success");
+  log("✓ Everything is assembled — looking great!", "success");
 }
 
 async function handleDeploy(): Promise<void> {
   state.stage = "deploy";
-  log("▶ Stage 5: Deploying to GitHub + Vercel...", "info");
+  log("▶ Petya is packing up, Vasya is ready to deliver...", "info");
 
   const files = state.stageData.files ?? {};
   const projectName = state.stageData.projectName ?? "goldy-project";
@@ -840,7 +840,7 @@ async function handleDeploy(): Promise<void> {
       await pushFilesToGitHub(ghResult.repoName, files);
       state.stageData.repoUrl = repoUrl;
     } catch (e) {
-      log(`GitHub failed (non-fatal): ${(e as Error).message}`, "warn");
+      log(`Petya had a snag (non-fatal): ${(e as Error).message}`, "warn");
     }
   }
 
@@ -856,17 +856,17 @@ async function handleDeploy(): Promise<void> {
       state.stageData.projectId = projectId;
       state.stageData.deploymentName = deploymentName;
     } catch (e) {
-      log(`Vercel deployment failed: ${(e as Error).message}`, "error");
+      log(`Vasya couldn't deliver: ${(e as Error).message}`, "error");
       if (!repoUrl) throw e;
-      log("Project code is saved to GitHub", "info");
+      log("✓ Petya stored the files safely", "info");
     }
   } else {
-    log("VERCEL_TOKEN not set — skipping deployment", "warn");
+    log("Vasya is off duty — no delivery key", "warn");
   }
 
-  log(`✓ Stage 5 complete — build done!`, "success");
-  if (deployUrl) log(`Live at: ${deployUrl}`, "success");
-  else if (repoUrl) log(`Code at: ${repoUrl}`, "success");
+  log(`✓ Crew is done — build complete!`, "success");
+  if (deployUrl) log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
+  else if (repoUrl) log(`✓ Petya saved it all at: ${repoUrl}`, "success");
 }
 
 async function runTaskPlan(plan: TaskSpec[], idea: string): Promise<void> {
@@ -902,9 +902,9 @@ async function runTaskPlan(plan: TaskSpec[], idea: string): Promise<void> {
 
 async function runBuild(idea: string) {
   try {
-    log("🤖 Claude is planning your build...", "info");
+    log("▶ Goldy is calling the crew together...", "info");
     const plan = await getTaskPlanFromClaude(idea);
-    log(`Task plan: ${plan.map((t) => `${t.agent}:${t.task}`).join(" → ")}`, "info");
+    log(`Crew assignments: ${plan.map((t) => `${t.agent}:${t.task}`).join(" → ")}`, "info");
 
     await runTaskPlan(plan, idea);
 
@@ -914,7 +914,7 @@ async function runBuild(idea: string) {
     const deployUrl = state.stageData.deployUrl ?? "";
     const repoUrl = state.stageData.repoUrl ?? "";
 
-    if (features.length) log(`Features: ${features.slice(0, 3).join(" · ")}`, "info");
+    if (features.length) log(`Built features: ${features.slice(0, 3).join(" · ")}`, "info");
 
     state.status = "done";
     state.stage = "done";
@@ -927,7 +927,7 @@ async function runBuild(idea: string) {
       deploymentName: state.stageData.deploymentName ?? undefined,
     };
 
-    log(`Build complete! ${Object.keys(files).length} files created.`, "success");
+    log(`✓ Crew knocked it out! ${Object.keys(files).length} files built.`, "success");
   } catch (err) {
     state.status = "error";
     state.stage = "error";

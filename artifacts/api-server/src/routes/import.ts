@@ -84,7 +84,7 @@ async function fetchGitHubZip(url: string): Promise<Buffer> {
   const repo = match[2].replace(/\.git$/, "");
   const token = process.env["GITHUB_TOKEN"];
 
-  log(`Fetching GitHub repo: ${user}/${repo}`, "info");
+  log(`▶ Petya is fetching files from ${user}/${repo}...`, "info");
 
   const headers: Record<string, string> = {
     "User-Agent": "Goldy-Builder/1.0",
@@ -114,7 +114,7 @@ async function fetchReplitZip(url: string): Promise<Buffer> {
   const project = match[2];
   const exportUrl = `https://replit.com/@${user}/${project}.zip`;
 
-  log(`Fetching Replit project: ${user}/${project}`, "info");
+  log(`▶ Petya is grabbing files from Replit: ${user}/${project}...`, "info");
 
   const res = await fetch(exportUrl, {
     headers: { "User-Agent": "Goldy-Builder/1.0" },
@@ -144,15 +144,15 @@ function assembleDesignAssets(
   let html = outFiles["index.html"];
   if (assets.css && html.includes("<!-- GOLDY_CSS -->")) {
     html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${assets.css}\n</style>`);
-    log("  ✓ Injected GPT-4o CSS into rebuilt project", "info");
+    log("  ✓ Boris's designs are baked in", "info");
   }
   if (assets.logoSvg && html.includes("<!-- GOLDY_LOGO -->")) {
     html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
-    log("  ✓ Injected Recraft logo into rebuilt project", "info");
+    log("  ✓ Masha's logo is mounted", "info");
   }
   if (assets.heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
     html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${assets.heroImageUrl}');background-size:cover;background-position:center;`);
-    log("  ✓ Injected FLUX hero image into rebuilt project", "info");
+    log("  ✓ Ivan's photo is framed", "info");
   }
   outFiles["index.html"] = html;
   return outFiles;
@@ -220,8 +220,8 @@ Output format — return ONLY valid JSON, no markdown fences, no explanation:
 
   const userContent = fileLines.join("");
 
-  log("Sending project files to Claude for analysis...", "info");
-  log(`Analyzing ${Object.keys(files).length} files...`, "info");
+  log("▶ Goldy is reviewing your project files...", "info");
+  log(`Goldy is reading ${Object.keys(files).length} files...`, "info");
 
   const response = await client.messages.create({
     model: "claude-opus-4-5",
@@ -237,7 +237,7 @@ Output format — return ONLY valid JSON, no markdown fences, no explanation:
   if (!jsonMatch) throw new Error("Claude did not return valid JSON");
 
   const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-  log(`Rebuilt as: "${parsed["project_name"] as string}"`, "success");
+  log(`✓ Goldy renamed it: "${parsed["project_name"] as string}"`, "success");
   log(parsed["description"] as string, "info");
   return parsed;
 }
@@ -257,10 +257,10 @@ async function runImport(
     let outFiles = (spec["files"] as Record<string, string>) || {};
 
     // Assemble: inject GPT-4o CSS, Recraft logo, FLUX hero image via placeholder replacement
-    log("Assembling design assets into rebuilt project...", "info");
+    log("▶ Goldy is assembling the crew's work...", "info");
     outFiles = assembleDesignAssets(outFiles, assets);
 
-    log(`Project: "${projectName}"`, "success");
+    log(`✓ Project ready: "${projectName}"`, "success");
     log(`${description}`, "info");
 
     let repoUrl = "";
@@ -274,7 +274,7 @@ async function runImport(
         repoUrl = ghResult.repoUrl;
         await pushFilesToGitHub(ghResult.repoName, outFiles);
       } catch (e) {
-        log(`GitHub failed (non-fatal): ${(e as Error).message}`, "warn");
+        log(`Petya had a snag (non-fatal): ${(e as Error).message}`, "warn");
       }
     }
 
@@ -285,12 +285,12 @@ async function runImport(
         projectId = vercelResult.projectId;
         deploymentName = vercelResult.deploymentName;
       } catch (e) {
-        log(`Vercel deployment failed: ${(e as Error).message}`, "error");
+        log(`Vasya couldn't deliver: ${(e as Error).message}`, "error");
         if (!repoUrl) throw e;
-        log("Project code saved to GitHub", "info");
+        log("✓ Petya stored the files safely", "info");
       }
     } else {
-      log("VERCEL_TOKEN not set — skipping deployment", "warn");
+      log("Vasya is off duty — no delivery key", "warn");
     }
 
     state.status = "done";
@@ -303,9 +303,9 @@ async function runImport(
       deploymentName: deploymentName || undefined,
     };
 
-    log(`Rebuild complete! ${Object.keys(outFiles).length} files generated.`, "success");
-    if (deployUrl) log(`Live at: ${deployUrl}`, "success");
-    else if (repoUrl) log(`Code at: ${repoUrl}`, "success");
+    log(`✓ Crew rebuilt it! ${Object.keys(outFiles).length} files ready.`, "success");
+    if (deployUrl) log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
+    else if (repoUrl) log(`✓ Petya stored it at: ${repoUrl}`, "success");
   } catch (err) {
     state.status = "error";
     state.error = (err as Error).message;
@@ -340,7 +340,7 @@ router.post("/import", conditionalMulter, (req, res) => {
       return;
     }
 
-    log("Reading uploaded ZIP file...", "info");
+    log("▶ Petya is unloading the ZIP package...", "info");
     let files: Record<string, string>;
     try {
       files = extractFilesFromZip(file.buffer);
@@ -355,7 +355,7 @@ router.post("/import", conditionalMulter, (req, res) => {
       return;
     }
 
-    log(`Extracted ${count} files from ZIP`, "success");
+    log(`✓ Petya unloaded ${count} files from the package`, "success");
     res.json({ ok: true, message: "Import started", filesFound: count });
     void runImport(files, file.originalname.replace(/\.zip$/, ""));
 
@@ -377,7 +377,7 @@ router.post("/import", conditionalMulter, (req, res) => {
         const files = extractFilesFromZip(buf);
         const count = Object.keys(files).length;
         if (count === 0) throw new Error("No readable files found in the repository");
-        log(`Extracted ${count} files from GitHub`, "success");
+        log(`✓ Petya grabbed ${count} files from the warehouse`, "success");
         await runImport(files, projectHint);
       } catch (e) {
         state.status = "error";
@@ -404,7 +404,7 @@ router.post("/import", conditionalMulter, (req, res) => {
         const files = extractFilesFromZip(buf);
         const count = Object.keys(files).length;
         if (count === 0) throw new Error("No readable files found in the Replit project");
-        log(`Extracted ${count} files from Replit`, "success");
+        log(`✓ Petya grabbed ${count} files from Replit`, "success");
         await runImport(files, projectHint);
       } catch (e) {
         state.status = "error";
