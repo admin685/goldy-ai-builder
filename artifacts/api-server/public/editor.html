@@ -82,6 +82,27 @@
   .log-line.error   .log-msg { color: #e05555; }
   .log-line.warn    .log-msg { color: var(--gold); }
 
+  /* ── Preview decision card ── */
+  .preview-card {
+    align-self: flex-start; max-width: 94%;
+    background: rgba(201,168,76,0.07);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px; border-bottom-left-radius: 3px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .preview-card .bubble-role { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gold); margin-bottom: 2px; }
+  .preview-card p { font-size: 0.88rem; line-height: 1.5; color: var(--text); }
+  .preview-card a { color: var(--gold); font-size: 0.82rem; }
+  .preview-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  .action-btn {
+    border: none; border-radius: 7px; padding: 8px 14px;
+    font-size: 0.83rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: opacity 0.15s;
+  }
+  .action-btn:hover { opacity: 0.82; }
+  .action-btn.deploy { background: linear-gradient(135deg, #b8902a, #e2c97e); color: #0a0a0f; }
+  .action-btn.discard { background: rgba(255,255,255,0.07); color: var(--muted); border: 1px solid var(--border); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
   /* ── Divider ── */
   .divider {
     width: 4px; background: var(--border); cursor: col-resize;
@@ -206,7 +227,7 @@
       <!-- Log overlay during edits -->
       <div class="log-overlay" id="log-overlay">
         <div class="overlay-spinner"></div>
-        <div class="overlay-title">Goldy is working on it…</div>
+        <div class="overlay-title" id="overlay-title">Goldy is working on it…</div>
         <div class="log-feed" id="log-feed"></div>
       </div>
     </div>
@@ -226,6 +247,7 @@
   let projectData = null;
   let pollTimer = null;
   let lastLogCount = 0;
+  let originalIframeUrl = '';   // restored on discard
 
   // ── Bootstrap ────────────────────────────────────────────────────────────
   async function init() {
@@ -261,6 +283,7 @@
 
       // Set up iframe
       if (projectData.vercel_url) {
+        originalIframeUrl = projectData.vercel_url;
         document.getElementById('preview-frame').src = projectData.vercel_url;
         document.getElementById('url-pill').textContent = projectData.vercel_url.replace('https://', '');
         document.getElementById('open-btn').href = projectData.vercel_url;
@@ -377,9 +400,12 @@
 
       appendOverlayLogs(data.logs || []);
 
-      if (data.status === 'done') {
+      if (data.status === 'preview') {
         clearInterval(pollTimer); pollTimer = null;
-        onEditDone(data.result || {});
+        onPreviewReady(data.result || {});
+      } else if (data.status === 'done') {
+        clearInterval(pollTimer); pollTimer = null;
+        onConfirmDone(data.result || {});
       } else if (data.status === 'error') {
         clearInterval(pollTimer); pollTimer = null;
         onEditError(data.error || 'Unknown error');
@@ -413,44 +439,145 @@
     lastLogCount = logs.length;
   }
 
-  // ── Edit done/error ───────────────────────────────────────────────────────
-  function onEditDone(result) {
+  // ── Preview ready — show decision bubble, load preview iframe ────────────
+  function onPreviewReady(result) {
     hideOverlay();
-    setStatus('done');
+    setStatus('previewing');
 
-    // Update iframe URL if changed
-    if (result.url && result.url !== document.getElementById('preview-frame').src) {
-      projectData.vercel_url = result.url;
-      document.getElementById('url-pill').textContent = result.url.replace('https://', '');
-      document.getElementById('open-btn').href = result.url;
+    // Load the preview URL in the right-panel iframe
+    const previewUrl = result.previewUrl;
+    if (previewUrl) {
+      document.getElementById('preview-frame').src = previewUrl;
+      document.getElementById('url-pill').textContent = '👁 ' + previewUrl.replace('https://', '');
     }
 
-    // Refresh iframe
-    refreshIframe();
+    // Inject the decision card into the chat
+    const histEl = document.getElementById('chat-history');
+    const emptyEl = histEl.querySelector('.empty-chat');
+    if (emptyEl) emptyEl.remove();
 
-    // Append Goldy done bubble
-    const msg = result.url
-      ? `Done! Your changes are live at ${result.url}`
-      : 'Done! Your changes have been applied.';
+    const card = document.createElement('div');
+    card.className = 'preview-card';
+    card.id = 'preview-decision-card';
+    card.innerHTML = `
+      <div class="bubble-role">⚒️ Goldy</div>
+      <p>Here's your preview — take a look at the site on the right.<br>
+      ${previewUrl ? `<a href="${escHtml(previewUrl)}" target="_blank" rel="noopener">Open preview in new tab ↗</a>` : ''}
+      </p>
+      <div class="preview-actions">
+        <button class="action-btn deploy" id="btn-deploy" onclick="onDeploy()">✅ Looks good — Deploy to goldy.team</button>
+        <button class="action-btn discard" id="btn-discard" onclick="onDiscard()">❌ Try again</button>
+      </div>`;
+    histEl.appendChild(card);
+    histEl.scrollTop = histEl.scrollHeight;
+  }
+
+  // ── Deploy: confirm → push to GitHub + production + DB ───────────────────
+  async function onDeploy() {
+    document.getElementById('btn-deploy').disabled = true;
+    document.getElementById('btn-discard').disabled = true;
+
+    setStatus('confirming');
+    document.getElementById('overlay-title').textContent = 'Deploying to goldy.team…';
+    showOverlay();
+    lastLogCount = 0;
+
+    try {
+      const res = await fetch(`${API}/edit/confirm`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        hideOverlay();
+        setStatus('error');
+        appendBubble('goldy', '⚠️ ' + (data.error || 'Deploy failed'));
+        setTimeout(() => setStatus('ready'), 3000);
+        enableInput();
+        return;
+      }
+      // Start polling for confirming → done
+      pollTimer = setInterval(pollEditStatus, 1500);
+    } catch (e) {
+      hideOverlay();
+      onEditError('Network error during deploy');
+    }
+  }
+
+  // ── Discard: wipe pending changes, restore original iframe ───────────────
+  async function onDiscard() {
+    document.getElementById('btn-deploy').disabled = true;
+    document.getElementById('btn-discard').disabled = true;
+
+    try {
+      await fetch(`${API}/edit/discard`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      });
+    } catch { /* non-fatal */ }
+
+    // Remove decision card
+    document.getElementById('preview-decision-card')?.remove();
+
+    // Restore original iframe
+    const frame = document.getElementById('preview-frame');
+    frame.src = originalIframeUrl;
+    if (originalIframeUrl) {
+      document.getElementById('url-pill').textContent = originalIframeUrl.replace('https://', '');
+    }
+
+    appendBubble('goldy', "No problem — let's try something different. What would you like to change?");
+    setStatus('ready');
+    enableInput();
+  }
+
+  // ── Confirm done — changes are live in production ─────────────────────────
+  function onConfirmDone(result) {
+    hideOverlay();
+    document.getElementById('overlay-title').textContent = 'Goldy is working on it…';
+
+    // Remove decision card (if still visible)
+    document.getElementById('preview-decision-card')?.remove();
+
+    const productionUrl = result.productionUrl;
+
+    // Update iframe to production URL
+    if (productionUrl) {
+      projectData.vercel_url = productionUrl;
+      originalIframeUrl = productionUrl;
+      document.getElementById('url-pill').textContent = productionUrl.replace('https://', '');
+      document.getElementById('open-btn').href = productionUrl;
+      document.getElementById('preview-frame').src = productionUrl;
+    } else {
+      refreshIframe();
+    }
+
+    const msg = productionUrl
+      ? `Your changes are live at ${productionUrl}`
+      : 'Your changes have been deployed to production.';
     appendBubble('goldy', msg);
 
-    // Re-enable input
-    const btn = document.getElementById('send-btn');
-    btn.disabled = false;
-    btn.textContent = 'Send →';
-
-    // Reset status after a moment
+    setStatus('done');
     setTimeout(() => setStatus('ready'), 3000);
+    enableInput();
   }
 
   function onEditError(error) {
     hideOverlay();
     setStatus('error');
     appendBubble('goldy', `⚠️ ${error}`);
+    // Reset overlay title for next time
+    document.getElementById('overlay-title').textContent = 'Goldy is working on it…';
+    enableInput();
+    setTimeout(() => setStatus('ready'), 4000);
+  }
+
+  function enableInput() {
     const btn = document.getElementById('send-btn');
     btn.disabled = false;
     btn.textContent = 'Send →';
-    setTimeout(() => setStatus('ready'), 4000);
   }
 
   function refreshIframe() {
@@ -464,8 +591,10 @@
   function setStatus(s) {
     const el = document.getElementById('nav-status');
     el.className = 'nav-status';
-    if (s === 'editing') { el.classList.add('editing'); el.textContent = '⚡ Editing…'; }
-    else if (s === 'done') { el.classList.add('done'); el.textContent = '✓ Done!'; }
+    if (s === 'editing')    { el.classList.add('editing'); el.textContent = '⚡ Editing…'; }
+    else if (s === 'previewing') { el.classList.add('editing'); el.textContent = '👁 Preview ready'; }
+    else if (s === 'confirming') { el.classList.add('editing'); el.textContent = '🚀 Deploying…'; }
+    else if (s === 'done')  { el.classList.add('done');  el.textContent = '✓ Live!'; }
     else if (s === 'error') { el.classList.add('error'); el.textContent = '✗ Error'; }
     else { el.textContent = 'Ready'; }
   }
