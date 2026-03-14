@@ -752,29 +752,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
   </div>
 
-  <!-- ── Roadmap card (shown between input and build) ──────────────────── -->
-  <div class="card" id="roadmap-card">
-    <div class="roadmap-header">Build Roadmap</div>
-    <div class="roadmap-sub">Here's what Goldy will build — and what you can add later.</div>
-    <div class="roadmap-grid">
-      <div class="roadmap-col core">
-        <div class="roadmap-col-title"><span>&#9679;</span> Phase 1 — Core</div>
-        <ul class="roadmap-items" id="roadmap-phase1"></ul>
-      </div>
-      <div class="roadmap-col important">
-        <div class="roadmap-col-title"><span>&#9679;</span> Phase 2 — Add Later</div>
-        <ul class="roadmap-items" id="roadmap-phase2"></ul>
-      </div>
-      <div class="roadmap-col extra">
-        <div class="roadmap-col-title"><span>&#9679;</span> Phase 3 — Future</div>
-        <ul class="roadmap-items" id="roadmap-phase3"></ul>
-      </div>
-    </div>
-    <div class="roadmap-actions">
-      <button class="btn" id="roadmap-build-btn" onclick="confirmBuild()">Build Phase 1</button>
-      <button class="roadmap-skip" onclick="skipRoadmap()">Skip & build now</button>
-    </div>
-  </div>
+  <!-- ── Roadmap card (shown between input and build, populated by JS) ─── -->
+  <div class="card" id="roadmap-card"></div>
 
   <!-- ── Status card (hidden until build starts) ────────────────────────── -->
   <div class="card" id="status-section">
@@ -1071,40 +1050,52 @@ textarea#idea::placeholder { color: var(--text-muted); }
     document.getElementById('build-btn').disabled = true;
     document.getElementById('build-btn').textContent = 'Analyzing…';
 
+    document.getElementById('roadmap-card').style.display = 'block';
+    document.getElementById('input-card').style.display = 'none';
+    document.getElementById('roadmap-card').innerHTML =
+      '<div class="roadmap-header">Analyzing your project…</div>' +
+      '<div class="roadmap-sub">Generating a build roadmap. This takes a few seconds.</div>' +
+      '<div class="roadmap-actions"><button class="roadmap-skip" onclick="skipRoadmap()">Build anyway →</button></div>';
+
+    let roadmapAborted = false;
+    const ctrl = new AbortController();
+
+    window._skipRoadmapCtrl = () => { roadmapAborted = true; ctrl.abort(); };
+
     try {
       const res = await fetch(`${API}/roadmap`, {
         method: 'POST',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ idea }),
+        signal: ctrl.signal,
       });
-      if (!res.ok) {
-        document.getElementById('build-btn').disabled = false;
-        document.getElementById('build-btn').textContent = 'Build my project';
-        doBuild(idea);
-        return;
-      }
+      if (roadmapAborted) return;
+      if (!res.ok) { skipRoadmap(); return; }
       currentRoadmap = await res.json();
-      showRoadmap(currentRoadmap);
+      renderRoadmapCard(currentRoadmap);
     } catch (e) {
-      document.getElementById('build-btn').disabled = false;
-      document.getElementById('build-btn').textContent = 'Build my project';
-      doBuild(idea);
+      if (!roadmapAborted) skipRoadmap();
     }
   }
 
-  function showRoadmap(roadmap) {
-    document.getElementById('input-card').style.display  = 'none';
-    document.getElementById('roadmap-card').style.display = 'block';
-
+  function renderRoadmapCard(roadmap) {
+    const labels = { phase1: 'Phase 1 — Core', phase2: 'Phase 2 — Add Later', phase3: 'Phase 3 — Future' };
+    const cls    = { phase1: 'core', phase2: 'important', phase3: 'extra' };
+    let gridHtml = '';
     ['phase1', 'phase2', 'phase3'].forEach(key => {
-      const ul = document.getElementById('roadmap-' + key);
-      ul.innerHTML = '';
-      (roadmap[key] || []).forEach(item => {
-        const li = document.createElement('li');
-        li.textContent = item;
-        ul.appendChild(li);
-      });
+      const items = (roadmap[key] || []).map(i => '<li>' + escHtml(i) + '</li>').join('');
+      gridHtml += '<div class="roadmap-col ' + cls[key] + '">' +
+        '<div class="roadmap-col-title"><span>&#9679;</span> ' + labels[key] + '</div>' +
+        '<ul class="roadmap-items">' + items + '</ul></div>';
     });
+    document.getElementById('roadmap-card').innerHTML =
+      '<div class="roadmap-header">Build Roadmap</div>' +
+      '<div class="roadmap-sub">Here\'s what Goldy will build — and what you can add later.</div>' +
+      '<div class="roadmap-grid">' + gridHtml + '</div>' +
+      '<div class="roadmap-actions">' +
+        '<button class="btn" onclick="confirmBuild()">Build Phase 1</button>' +
+        '<button class="roadmap-skip" onclick="skipRoadmap()">Skip & build now</button>' +
+      '</div>';
   }
 
   function confirmBuild() {
@@ -1113,6 +1104,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
   }
 
   function skipRoadmap() {
+    if (window._skipRoadmapCtrl) { window._skipRoadmapCtrl(); window._skipRoadmapCtrl = null; }
     currentRoadmap = null;
     document.getElementById('roadmap-card').style.display = 'none';
     doBuild(currentIdea);
@@ -1324,8 +1316,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
         currentRoadmap.phase2.forEach(feature => {
           const chip = document.createElement('a');
           chip.className = 'phase2-chip';
-          chip.textContent = feature;
-          chip.href = '/editor?id=' + result.projectId + '&instruction=' + encodeURIComponent('Add: ' + feature);
+          chip.textContent = '+ ' + feature;
+          chip.href = '/editor?id=' + result.projectId + '&instruction=' + encodeURIComponent(feature);
           chip.target = '_self';
           p2chips.appendChild(chip);
         });

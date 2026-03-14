@@ -1130,9 +1130,9 @@ Rules:
     }
 
     res.json({
-      phase1: roadmap.phase1.slice(0, 6),
-      phase2: roadmap.phase2.slice(0, 6),
-      phase3: roadmap.phase3.slice(0, 5),
+      phase1: roadmap.phase1.slice(0, 5),
+      phase2: roadmap.phase2.slice(0, 5),
+      phase3: roadmap.phase3.slice(0, 4),
     });
   } catch (e) {
     res.status(500).json({ error: "Failed to generate roadmap" });
