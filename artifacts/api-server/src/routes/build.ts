@@ -433,7 +433,7 @@ async function uploadFileToVercel(
 export async function deployToVercel(
   projectName: string,
   files: Record<string, string>
-): Promise<{ url: string; projectId: string; deploymentName: string }> {
+): Promise<{ url: string; customUrl?: string; projectId: string; deploymentName: string }> {
   const token = process.env["VERCEL_TOKEN"];
   if (!token) throw new Error("VERCEL_TOKEN is not set");
 
@@ -497,10 +497,40 @@ export async function deployToVercel(
   }
 
   const deployUrl = `https://${data.url}`;
-  log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
+
+  // ── Auto-attach custom subdomain (e.g. project-name.goldy.team) ──────────
+  let customUrl: string | undefined;
+  const customDomain = process.env["CUSTOM_DOMAIN"];
+  if (customDomain && data.projectId) {
+    const subdomain = `${deployName}.${customDomain}`;
+    try {
+      const domRes = await fetch(
+        `https://api.vercel.com/v9/projects/${data.projectId}/domains`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ name: subdomain }),
+        }
+      );
+      const domData = (await domRes.json()) as { error?: { code?: string; message?: string } };
+      if (domRes.ok || domData.error?.code === "domain_already_in_project") {
+        customUrl = `https://${subdomain}`;
+        log(`✓ Vasya pinned the address — LIVE at ${customUrl}`, "success");
+      } else {
+        log(`Vasya couldn't attach ${subdomain}: ${domData.error?.message ?? "unknown error"}`, "warn");
+      }
+    } catch (e) {
+      log(`Vasya couldn't attach custom domain (non-fatal): ${(e as Error).message}`, "warn");
+    }
+  }
+
+  if (!customUrl) {
+    log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
+  }
 
   return {
     url: deployUrl,
+    customUrl,
     projectId: data.projectId,
     deploymentName: data.name,
   };
@@ -851,9 +881,8 @@ async function handleDeploy(): Promise<void> {
   if (process.env["VERCEL_TOKEN"]) {
     try {
       const vercelResult = await deployToVercel(projectName, files);
-      deployUrl = vercelResult.url;
-      console.log(`[DIAG] Vercel deploy URL: ${deployUrl}`);
-      log(`[DIAG] Vercel URL: ${deployUrl}`, "info");
+      // Prefer the custom subdomain URL; fall back to vercel.app URL
+      deployUrl = vercelResult.customUrl ?? vercelResult.url;
       projectId = vercelResult.projectId;
       deploymentName = vercelResult.deploymentName;
       state.stageData.deployUrl = deployUrl;
@@ -869,7 +898,7 @@ async function handleDeploy(): Promise<void> {
   }
 
   log(`✓ Crew is done — build complete!`, "success");
-  if (deployUrl) log(`✓ Vasya delivered the project — it's LIVE! ${deployUrl}`, "success");
+  if (deployUrl) log(`✓ Your project is LIVE at ${deployUrl}`, "success");
   else if (repoUrl) log(`✓ Petya saved it all at: ${repoUrl}`, "success");
 }
 
@@ -978,6 +1007,7 @@ router.get("/status", (_req, res) => {
     result: state.result,
     error: state.error,
     idea: state.idea,
+    customDomain: process.env["CUSTOM_DOMAIN"] ?? null,
   });
 });
 

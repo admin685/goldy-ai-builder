@@ -1008,7 +1008,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
         if (data.status === 'done') {
           clearInterval(pollTimer); pollTimer = null;
           stopAnimation();
-          showResult(data.result || {});
+          showResult(data.result || {}, data.customDomain || null);
         } else if (data.status === 'error') {
           clearInterval(pollTimer); pollTimer = null;
           stopAnimation();
@@ -1067,22 +1067,30 @@ textarea#idea::placeholder { color: var(--text-muted); }
     }
   }
 
-  function showResult(result) {
+  function showResult(result, customDomain) {
     const card = document.getElementById('result-card');
     card.style.display = 'block';
     const title = document.getElementById('result-title');
     title.className   = 'result-title success';
-    title.textContent = '🎉 Your project is live!';
+
+    const isCustomDomain = result.url && customDomain && result.url.includes(customDomain);
+    title.textContent = isCustomDomain
+      ? '🚀 Your project is live on ' + customDomain + '!'
+      : '🎉 Your project is live!';
 
     const linksEl = document.getElementById('result-links');
     linksEl.innerHTML = '';
 
     if (result.url) {
+      const label = isCustomDomain ? '🌐 Live Site' : '🌐 Live URL';
+      const extraStyle = isCustomDomain
+        ? 'border-color:rgba(201,168,76,0.6);background:rgba(201,168,76,0.05);'
+        : '';
       linksEl.innerHTML += `
-        <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener">
+        <a class="result-link" href="${escHtml(result.url)}" target="_blank" rel="noopener" style="${extraStyle}">
           <div>
-            <div class="link-label">🌐 Live URL</div>
-            <div class="link-url">${escHtml(result.url)}</div>
+            <div class="link-label">${label}</div>
+            <div class="link-url" style="${isCustomDomain ? 'color:var(--gold);font-weight:600;' : ''}">${escHtml(result.url)}</div>
           </div>
           <span style="color:var(--gold);font-size:1.1rem">↗</span>
         </a>`;
