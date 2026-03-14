@@ -660,7 +660,7 @@ async function renderAI(mc) {
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-weight:600;color:var(--text);">${esc(h.member)}</span>
             <span style="display:flex;gap:8px;align-items:center;">
-              ${h.approved ? '<span class="status-badge done">Approved</span>' : `<button class="btn btn-accent btn-sm" onclick="approveSuggestion(${h.id}, '${esc(h.member)}')">Approve</button>`}
+              ${h.approved ? '<span class="status-badge done">Approved</span>' : `<button class="btn btn-accent btn-sm" data-suggest-id="${h.id}" data-suggest-member="${esc(h.member)}" data-suggest-prompt="${esc(h.suggested_prompt)}" onclick="approveSuggestion(+this.dataset.suggestId, this.dataset.suggestMember, this.dataset.suggestPrompt)">Approve</button>`}
               <span style="font-size:0.75rem;color:var(--text-muted);">${fmt(h.created_at)}</span>
             </span>
           </div>
@@ -680,7 +680,9 @@ async function savePrompt(member) {
   if (r) showToast(`${member}'s prompt saved`);
 }
 
-async function approveSuggestion(id, member) {
+async function approveSuggestion(id, member, suggestedPrompt) {
+  const textarea = document.getElementById(`prompt-${member}`);
+  if (textarea) textarea.value = suggestedPrompt;
   const r = await adminFetch(`${API}/admin/prompt-history/${id}/approve`, { method: 'POST' });
   if (!r) return;
   showToast(`${member}'s prompt updated from suggestion`);
