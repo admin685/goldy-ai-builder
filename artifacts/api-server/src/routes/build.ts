@@ -149,7 +149,7 @@ async function generateLogoWithRecraft(projectName: string, idea: string): Promi
 
   log("▶ Masha is painting the logo...", "info");
 
-  const prompt = `Minimalist modern SVG logo for "${projectName}": ${idea.slice(0, 100)}. Clean geometric design, single color, professional brand mark.`;
+  const prompt = `minimalist flat vector logo icon for ${projectName}, single geometric shape, bold, professional, no text, clean`;
 
   const res = await fetch("https://external.api.recraft.ai/v1/images/generations", {
     method: "POST",
@@ -688,7 +688,7 @@ async function handleRecraft(idea: string): Promise<void> {
   if (!apiKey) { log("Masha is off duty — no API key, skipping logo", "warn"); return; }
 
   try {
-    const prompt = `Minimalist modern logo for "${state.stageData.projectName ?? "app"}": ${idea.slice(0, 80)}. Clean geometric design, professional brand mark.`;
+    const prompt = `minimalist flat vector logo icon for ${state.stageData.projectName ?? "app"}, single geometric shape, bold, professional, no text, clean`;
     const res = await fetch("https://external.api.recraft.ai/v1/images/generations", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -927,7 +927,10 @@ function handleAssemble(): void {
   }
 
   if (logoUrl && html.includes("<!-- GOLDY_LOGO -->")) {
-    html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${logoUrl}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
+    const initial = (state.stageData.projectName ?? "G").charAt(0).toUpperCase();
+    const fallbackStyle = "width:40px;height:40px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#fff;font-family:sans-serif;flex-shrink:0;";
+    const onerror = `this.style.display='none';var f=document.createElement('div');f.style.cssText='${fallbackStyle}';f.textContent='${initial}';this.parentNode.insertBefore(f,this.nextSibling);`;
+    html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${logoUrl}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;" onerror="${onerror}">`);
     log("  ✓ Masha's logo is mounted", "info");
   }
 

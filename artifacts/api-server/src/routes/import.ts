@@ -150,7 +150,8 @@ function extractCssClassSummary(css: string): string {
 
 function assembleDesignAssets(
   outFiles: Record<string, string>,
-  assets: { css: string; heroImageUrl: string; logoSvg: string }
+  assets: { css: string; heroImageUrl: string; logoSvg: string },
+  projectName: string
 ): Record<string, string> {
   // Inject Boris's CSS: prepend into style.css if it exists, otherwise inject via placeholder in index.html
   if (assets.css) {
@@ -173,7 +174,10 @@ function assembleDesignAssets(
     if (!name.endsWith(".html")) continue;
     let html = outFiles[name];
     if (assets.logoSvg && html.includes("<!-- GOLDY_LOGO -->")) {
-      html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
+      const initial = projectName.charAt(0).toUpperCase() || "G";
+      const fallbackStyle = "width:40px;height:40px;border-radius:50%;background:#D4AF37;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#fff;font-family:sans-serif;flex-shrink:0;";
+      const onerror = `this.style.display='none';var f=document.createElement('div');f.style.cssText='${fallbackStyle}';f.textContent='${initial}';this.parentNode.insertBefore(f,this.nextSibling);`;
+      html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;" onerror="${onerror}">`);
       log("  ✓ Masha's logo is mounted", "info");
     }
     if (assets.heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
@@ -306,7 +310,7 @@ async function runImport(
 
     // Phase 3: Assemble — inject Boris's CSS, Masha's logo, Ivan's hero image
     log("▶ Goldy is assembling the crew's work...", "info");
-    let outFiles = assembleDesignAssets(generatedFiles, assets);
+    let outFiles = assembleDesignAssets(generatedFiles, assets, projectName);
 
     log(`✓ Project ready: "${projectName}"`, "success");
 
