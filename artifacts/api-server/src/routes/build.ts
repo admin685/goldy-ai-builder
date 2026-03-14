@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { createHash } from "crypto";
-import { requireAuth } from "../middlewares/auth.js";
+import { requireAuth, requireAdmin } from "../middlewares/auth.js";
 import { saveProject } from "../lib/projects.js";
 
 const router: IRouter = Router();
@@ -253,6 +253,7 @@ export interface BuildState {
   error?: string;
   idea?: string;
   userId?: number;
+  startedAt?: number;
 }
 
 export const state: BuildState = {
@@ -277,7 +278,21 @@ export function resetState(idea: string, userId?: number) {
   state.error = undefined;
   state.idea = idea;
   state.userId = userId;
+  state.startedAt = Date.now();
   log("▶ Goldy is reviewing the blueprints...", "info");
+}
+
+const BUILD_TIMEOUT_MS = 20 * 60 * 1000;
+
+export function clearIfTimedOut(): boolean {
+  if (state.status !== "building") return false;
+  if (!state.startedAt || Date.now() - state.startedAt <= BUILD_TIMEOUT_MS) return false;
+  console.log("[Goldy] [WARN] Build auto-reset: timed out after 20 minutes");
+  state.status = "idle";
+  state.stage = "";
+  state.error = "Previous build timed out after 20 minutes — auto-reset";
+  state.startedAt = undefined;
+  return true;
 }
 
 // ── GitHub functions ───────────────────────────────────────────────────────
@@ -1061,6 +1076,7 @@ router.post("/build", requireAuth, (req, res) => {
     return;
   }
 
+  clearIfTimedOut();
   if (state.status === "building") {
     res.status(409).json({ error: "A build is already in progress" });
     return;
@@ -1081,6 +1097,19 @@ router.get("/status", (_req, res) => {
     idea: state.idea,
     customDomain: process.env["CUSTOM_DOMAIN"] ?? null,
   });
+});
+
+router.post("/admin/reset-build", requireAdmin, (_req, res) => {
+  const previous = state.status;
+  state.status = "idle";
+  state.stage = "";
+  state.stageData = {};
+  state.logs = [];
+  state.result = {};
+  state.error = undefined;
+  state.startedAt = undefined;
+  console.log(`[Goldy] [WARN] Admin manually reset build state from "${previous}" to "idle"`);
+  res.json({ ok: true, previous });
 });
 
 // ── Task 3: Domain connection routes ──────────────────────────────────────

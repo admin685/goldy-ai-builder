@@ -2,139 +2,157 @@
 
 ## Overview
 
-**Goldy Builds** is an AI-powered project builder hub. Users describe any software project idea, and the system autonomously generates full working code via Claude, pushes it to a GitHub repo, and deploys it to Vercel — all in minutes.
+**Goldy Builds** is an autonomous AI platform. Users describe any software project idea, and the system generates full working code via a 6-crew AI pipeline (Claude + GPT-4o + FLUX + Recraft), pushes to GitHub, deploys to Vercel, and returns a live `{name}.goldy.team` URL.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+pnpm workspace monorepo using TypeScript and Express.
+
+## Pages
+
+- `/` — landing page
+- `/app` — builder (new project prompt)
+- `/dashboard` — user's projects list
+- `/editor?id={projectId}` — split-screen editor (chat left + preview iframe right)
+- `/login`, `/register` — auth pages
+- `/admin` — admin panel (users + all projects)
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Runtime**: Node.js 24, TypeScript 5.9
+- **Framework**: Express 5
+- **Database**: PostgreSQL (Replit-managed), direct `pg` pool queries
+- **Auth**: JWT (7-day), bcryptjs, `requireAuth` / `requireAdmin` middleware
+- **AI**: Anthropic Claude (`claude-opus-4-5`), OpenAI GPT-4o, Replicate FLUX, Recraft v3
+- **Deploy targets**: GitHub API + Vercel API
+- **Custom domain**: `goldy.team` (env var `CUSTOM_DOMAIN`)
 
 ## Structure
 
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+```
+artifacts/api-server/
+├── src/
+│   ├── index.ts           — port binding, seedAdmin
+│   ├── app.ts             — Express setup, static HTML routes, /api mount
+│   ├── middlewares/
+│   │   └── auth.ts        — JWT parse, requireAuth, requireAdmin, signToken
+│   ├── lib/
+│   │   ├── db.ts          — pg Pool, query/queryOne helpers
+│   │   ├── projects.ts    — saveProject() INSERT
+│   │   └── seed-admin.ts  — creates admin user on first boot
+│   └── routes/
+│       ├── index.ts       — mounts all routers
+│       ├── auth.ts        — /register, /login, /auth/projects, /auth/admin/*
+│       ├── build.ts       — 5-stage build pipeline + /build, /status, /domain, /admin/reset-build
+│       ├── import.ts      — /import (ZIP / GitHub / Replit) with per-file rebuild
+│       ├── edit.ts        — /edit, /edit/confirm, /edit/discard, /edit/status, /edit/history
+│       └── health.ts      — /healthz
+├── public/
+│   ├── index.html         — landing page
+│   ├── app.html           — builder UI
+│   ├── dashboard.html     — project dashboard
+│   ├── editor.html        — split-screen editor (40% chat / 60% preview)
+│   ├── login.html
+│   ├── register.html
+│   └── admin.html
 ```
 
-## TypeScript & Composite Projects
+## DB Schema (PostgreSQL)
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+```sql
+users        (id SERIAL PK, email TEXT UNIQUE, password_hash TEXT, role TEXT default 'user', created_at)
+projects     (id SERIAL PK, user_id INT FK, name TEXT, vercel_url TEXT, github_url TEXT, files_json TEXT, created_at)
+edit_history (id SERIAL PK, project_id INT FK, role TEXT, message TEXT, created_at)
+```
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+`files_json` is a JSON string of `Record<string, string>` — all project file paths and their contents. The project list API deliberately does NOT select this column (too large). The editor fetches it separately.
 
-## Root Scripts
+## Build Pipeline (build.ts) — 5 stages
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+All state lives in one in-memory `BuildState` object, exported and shared with import.ts.
 
-## Packages
+1. **ANALYZE** (Claude, ≤600 tokens out) — returns `{project_name, description, files_to_generate: [...]}`. No code.
+2. **DESIGN** (parallel: GPT-4o CSS ≤3000 tokens, Recraft logo URL, FLUX hero image URL) — all non-fatal.
+3. **CODE** (Claude, per-file: one call per file, each ≤8000 tokens, ordered CSS → JS → HTML → README) — each call gets CSS class summary + previously-generated files for consistency.
+4. **ASSEMBLE** (no AI) — prepend Boris's CSS to `style.css`; replace `<!-- GOLDY_LOGO -->` and `<!-- GOLDY_HERO -->` placeholders in all HTML files.
+5. **DEPLOY** — `createGitHubRepo` + `pushFilesToGitHub` (Petya), then `deployToVercel` with custom domain mapping (Vasya). Saves to DB via `saveProject()`.
 
-### `artifacts/api-server` (`@workspace/api-server`)
+### Stuck-build protection
+- `BuildState` has `startedAt?: number` (set in `resetState`).
+- `clearIfTimedOut()` — if `status === "building"` and `Date.now() - startedAt > 20min`, resets to idle. Called at the top of `POST /build` and `POST /import` guards.
+- `POST /api/admin/reset-build` (admin-only JWT) — force-resets state to idle immediately; returns `{ok:true, previous}`.
+- Server restart always resets state to idle (module-level init).
 
-Express 5 API server serving both the Goldy Builds chat UI and the builder backend.
+## Import Pipeline (import.ts)
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — serves HTML at `/api`, mounts API routes at `/api`, serves static files from `public/`
-- Routes:
-  - `src/routes/health.ts` — `GET /healthz`
-  - `src/routes/build.ts` — `POST /build`, `GET /status`, `POST /domain`, `GET /domain/check`, `POST /callback` — exports shared pipeline functions
-  - `src/routes/import.ts` — `POST /import` — ZIP upload, GitHub URL, or Replit URL import + rebuild via Claude
-- Static: `public/index.html` — the Goldy Builds chat UI (dark theme, canvas animation, build log, tab switcher)
-- Depends on: `@workspace/db`, `@workspace/api-zod`, `@anthropic-ai/sdk`, `adm-zip`, `multer`
+Same per-file approach as build, not a single JSON blob:
+1. Fetch ZIP from GitHub API (`/zipball/HEAD` with auth), Replit export, or direct upload.
+2. Extract with `adm-zip`; skip binaries/node_modules (max 60 files, 100KB each).
+3. Run design pipeline (Boris, Masha, Ivan) based on project hint.
+4. **Analyze** (Claude, ≤600 tokens) — returns project name + description + files_to_generate.
+5. **Per-file generation** (Claude, ≤8000 tokens each) — each file receives source file snippets as context.
+6. **Assemble** — same CSS/logo/hero injection as build.
+7. **Deploy** — GitHub + Vercel.
 
-**Required environment variables:**
-- `ANTHROPIC_API_KEY` — Claude API key for code generation + assembly
-- `GITHUB_TOKEN` — GitHub personal access token (scopes: `repo`) for creating repos
-- `VERCEL_TOKEN` — Vercel API token for deployment
-- `OPENAI_API_KEY` — GPT-4o for premium CSS generation in the multi-AI design pipeline
-- `REPLICATE_API_TOKEN` — FLUX Schnell via Replicate for hero image generation
-- `RECRAFT_API_KEY` — Recraft v3 for SVG logo generation
-- `SECRET_CALLBACK_TOKEN` — optional token to secure the `/callback` endpoint
+**GitHub token note**: The `GITHUB_TOKEN` is a fine-grained PAT scoped to `admin685`'s repos only. Importing third-party public repos returns 404. Import works for any repo the token has access to.
 
-**Orchestration engine (5-stage sequential pipeline):**
-Claude first outputs a JSON task plan (`[{id, agent, task}]`). A task runner then executes each step sequentially, saving to `BuildState.stageData` after each:
-1. **ANALYZE** (Claude, ≤400 tokens out) — `project_name`, `description`, `files_to_generate`. No code.
-2. **DESIGN** (parallel: GPT-4o CSS ≤1500 tokens, Recraft logo URL, FLUX hero image URL) — all non-fatal; results saved to `stageData`.
-3. **CODE** (Claude, ≤4000 tokens out) — receives compact context: description + file list + CSS class-name summary (not full CSS) + URL strings. Emits `<!-- GOLDY_CSS -->`, `<!-- GOLDY_LOGO -->`, `<!-- GOLDY_HERO -->` placeholders.
-4. **ASSEMBLE** (string-replace, no AI) — injects GPT-4o CSS, Recraft logo `<img>`, FLUX `background-image` URL via placeholder replacement on `index.html`.
-5. **DEPLOY** — same GitHub + Vercel logic as before.
+## Editor / Edit Pipeline (edit.ts)
 
-`BuildState` now has `stage: string` (current task label) and `stageData: Partial<StageData>` (accumulated results). `GET /api/status` returns `stage` field.
+Per-project edit state in a `Map<number, EditState>`. Statuses: `idle → editing → preview → confirming → done | error`.
 
-**CSS class-name summary:** After GPT-4o generates CSS, `extractCssClassSummary(css)` runs a regex to extract up to 40 unique class names (max 300 chars). This summary is what Claude CODE receives instead of the full CSS string.
+### `POST /edit` (start edit)
+Two-step targeted approach (no single-blob JSON):
+1. **Identify** (Claude, ≤400 tokens) — given file list + instruction, returns `{files_to_edit: ["index.html"]}`.
+2. **Per-file edit** (Claude, ≤8000 tokens each) — edits only the identified files; others are preserved unchanged. Each call receives the full current file content + snippets of other files for context.
+3. **Preview deploy** — deploys to `{name}-preview` Vercel project (no DB write, no GitHub push).
+4. State moves to `preview`; client sees two buttons.
 
-**UI:** `public/landing.html` has been completely rewritten with clean, readable hand-crafted CSS (single `<style>` block). `public/index.html` had Google Fonts `<link>` tags added. No AI-generated CSS on either page.
+### `POST /edit/confirm`
+Pushes to GitHub (SHA-based update) + deploys to production Vercel project + UPDATE DB `files_json` + saves to `edit_history`.
 
-**Import & Rebuild flow:**
-1. `POST /api/import` — three modes:
-   - `multipart/form-data` with `file` field — ZIP file upload
-   - JSON `{mode:"github", url}` — fetches `/zipball/HEAD` from GitHub API
-   - JSON `{mode:"replit", url}` — fetches `{url}.zip` from Replit public export
-2. ZIP parsed with `adm-zip`; binary/large/node_modules files filtered out (max 60 files, 100KB each)
-3. All file contents sent to Claude: "Analyze this project, rebuild as clean static HTML/CSS/JS"
-4. Rebuilt files go through the same GitHub + Vercel pipeline as Build New
-5. Same `GET /api/status` polling, same result card + domain connection panel
+### `POST /edit/discard`
+Resets state to idle, clears pending files/project.
 
-**Domain connection:**
-- `POST /api/domain` — adds a domain to the Vercel project, returns exact DNS records (A or CNAME)
-- `GET /api/domain/check` — polls Vercel for domain verification status
+## API Routes Reference
 
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | /api/auth/register | — | Create user, returns JWT |
+| POST | /api/auth/login | — | Returns JWT |
+| GET | /api/auth/projects | user | Own projects (no files_json) |
+| GET | /api/auth/admin/users | admin | All users |
+| GET | /api/auth/admin/projects | admin | All projects |
+| POST | /api/build | user | Start 5-stage build |
+| GET | /api/status | — | Poll build status |
+| POST | /api/admin/reset-build | admin | Force-reset stuck build |
+| POST | /api/import | user | Import from ZIP/GitHub/Replit |
+| POST | /api/edit | user | Start per-file edit |
+| GET | /api/edit/status | user | Poll edit status |
+| POST | /api/edit/confirm | user | Deploy preview to production |
+| POST | /api/edit/discard | user | Discard pending preview |
+| GET | /api/edit/history | user | Chat history for project |
+| POST | /api/domain | — | Add custom domain to Vercel |
+| GET | /api/domain/check | — | Check domain verification |
 
-### `lib/db` (`@workspace/db`)
+## Environment Variables
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+| Variable | Required | Notes |
+|----------|----------|-------|
+| `PORT` | ✅ | Set by Replit |
+| `DATABASE_URL` | ✅ | Set by Replit |
+| `JWT_SECRET` | ✅ | Manual secret |
+| `ANTHROPIC_API_KEY` | ✅ | Claude API |
+| `OPENAI_API_KEY` | ✅ | GPT-4o (Boris CSS) |
+| `GITHUB_TOKEN` | ✅ | Fine-grained PAT for admin685 repos |
+| `VERCEL_TOKEN` | ✅ | Vercel deploy API |
+| `REPLICATE_API_TOKEN` | ✅ | FLUX hero images |
+| `RECRAFT_API_KEY` | ✅ | Recraft v3 logos |
+| `CUSTOM_DOMAIN` | ✅ | `goldy.team` |
+| `ADMIN_EMAIL` | ✅ | Seed admin account |
+| `ADMIN_PASSWORD` | ✅ | Seed admin account |
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+## Running Locally
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+```bash
+pnpm --filter @workspace/api-server run dev
+```
 
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+Server listens on `$PORT`. All HTML pages served at `/api/{page}` via explicit Express routes.

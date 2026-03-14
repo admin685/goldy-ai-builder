@@ -2,7 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import Anthropic from "@anthropic-ai/sdk";
 import multer from "multer";
 import AdmZip from "adm-zip";
-import { state, log, resetState, createGitHubRepo, pushFilesToGitHub, deployToVercel, runDesignPipeline } from "./build.js";
+import { state, log, resetState, clearIfTimedOut, createGitHubRepo, pushFilesToGitHub, deployToVercel, runDesignPipeline } from "./build.js";
 import { requireAuth } from "../middlewares/auth.js";
 import { saveProject } from "../lib/projects.js";
 
@@ -142,106 +142,129 @@ function assembleDesignAssets(
   outFiles: Record<string, string>,
   assets: { css: string; heroImageUrl: string; logoSvg: string }
 ): Record<string, string> {
-  if (!outFiles["index.html"]) return outFiles;
-  let html = outFiles["index.html"];
-  if (assets.css && html.includes("<!-- GOLDY_CSS -->")) {
-    html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${assets.css}\n</style>`);
-    log("  ✓ Boris's designs are baked in", "info");
+  // Inject Boris's CSS: prepend into style.css if it exists, otherwise inject via placeholder in index.html
+  if (assets.css) {
+    if (outFiles["style.css"] !== undefined) {
+      outFiles["style.css"] = outFiles["style.css"].replace(/^\/\* GOLDY_CSS_INJECT \*\/\n?/, "");
+      outFiles["style.css"] = assets.css + "\n\n/* --- Goldy-generated project CSS --- */\n\n" + outFiles["style.css"];
+      log("  ✓ Boris's designs injected into style.css", "info");
+    } else {
+      for (const name of Object.keys(outFiles)) {
+        if (name.endsWith(".html") && outFiles[name].includes("<!-- GOLDY_CSS -->")) {
+          outFiles[name] = outFiles[name].replace("<!-- GOLDY_CSS -->", `<style>\n${assets.css}\n</style>`);
+          log("  ✓ Boris's designs baked into " + name, "info");
+        }
+      }
+    }
   }
-  if (assets.logoSvg && html.includes("<!-- GOLDY_LOGO -->")) {
-    html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
-    log("  ✓ Masha's logo is mounted", "info");
+
+  // Replace logo and hero placeholders in all HTML files
+  for (const name of Object.keys(outFiles)) {
+    if (!name.endsWith(".html")) continue;
+    let html = outFiles[name];
+    if (assets.logoSvg && html.includes("<!-- GOLDY_LOGO -->")) {
+      html = html.replace("<!-- GOLDY_LOGO -->", `<img src="${assets.logoSvg}" alt="Logo" class="navbar-logo" style="height:40px;width:auto;">`);
+      log("  ✓ Masha's logo is mounted", "info");
+    }
+    if (assets.heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
+      html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${assets.heroImageUrl}');background-size:cover;background-position:center;`);
+      log("  ✓ Ivan's photo is framed", "info");
+    }
+    outFiles[name] = html;
   }
-  if (assets.heroImageUrl && html.includes("<!-- GOLDY_HERO -->")) {
-    html = html.replace("<!-- GOLDY_HERO -->", `background-image:url('${assets.heroImageUrl}');background-size:cover;background-position:center;`);
-    log("  ✓ Ivan's photo is framed", "info");
-  }
-  outFiles["index.html"] = html;
   return outFiles;
 }
 
-async function callClaudeImport(
+async function analyzeImport(
   files: Record<string, string>,
-  projectHint: string,
-  assets?: { css: string; heroImageUrl: string; logoSvg: string }
-): Promise<Record<string, unknown>> {
+  projectHint: string
+): Promise<{ project_name: string; description: string; files_to_generate: string[] }> {
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-
   const client = new Anthropic({ apiKey });
 
-  const hasAssets = assets && (assets.css || assets.heroImageUrl || assets.logoSvg);
-  const cssClassSummary = assets?.css ? extractCssClassSummary(assets.css) : "";
-
-  const assetInstructions = hasAssets
-    ? `
-DESIGN SYSTEM — pre-generated assets will be injected after you output the code. Follow these instructions exactly:
-${cssClassSummary ? `1. CSS CLASS NAMES — Use these classes in your HTML (full CSS auto-injected): ${cssClassSummary}
-   In index.html <head>, place the placeholder: <!-- GOLDY_CSS -->` : ""}
-${assets?.logoSvg ? `2. LOGO — In the navbar, place the placeholder: <!-- GOLDY_LOGO -->` : ""}
-${assets?.heroImageUrl ? `3. HERO IMAGE — On the hero element's style attribute, place the placeholder: <!-- GOLDY_HERO -->` : ""}
-Do NOT write your own CSS for the design system classes — the injected CSS handles them.
-`
-    : "";
-
-  const systemPrompt = `You are a senior front-end developer. You are given source files from an existing project. Your job is to:
-1. Carefully analyze what the project does, its features, UI design, and functionality
-2. Rebuild it as a clean, optimized STATIC HTML/CSS/JS web app — no server, no backend, no build tools required
-3. Preserve ALL the original features and design intent
-4. Make the code clean, modern, and Vercel-ready (just open index.html)
-
-CRITICAL RULES:
-- Output ONLY static files: HTML, CSS, JS. No Python, Node.js server code, requirements.txt, package.json server deps.
-- Use vanilla JS only — no React, no frameworks, no CDN imports needed.
-- Store data in localStorage where appropriate.
-- Make the UI beautiful and faithful to the original design intent.
-- The app must work by opening index.html in a browser with no server.
-- Generate REAL, working code — not pseudocode or placeholders.
-${assetInstructions}
-Output format — return ONLY valid JSON, no markdown fences, no explanation:
-{
-  "project_name": "kebab-case-name",
-  "project_type": "webapp",
-  "tech_stack": "HTML/CSS/JavaScript",
-  "description": "One sentence description of what this app does",
-  "features": ["Feature 1", "Feature 2", "Feature 3"],
-  "files": {
-    "index.html": "<!DOCTYPE html>... complete rebuilt file ...",
-    "README.md": "# Project Name\\n..."
-  }
-}`;
-
-  const fileLines: string[] = [
-    `Imported project: "${projectHint}"`,
-    `\nHere are all the source files:\n`,
-  ];
-
+  const fileLines: string[] = [`Imported project: "${projectHint}"\n\nSource files to analyze:\n`];
   for (const [path, content] of Object.entries(files)) {
-    fileLines.push(`\n=== ${path} ===\n${content}`);
+    fileLines.push(`\n=== ${path} ===\n${content.slice(0, 2000)}`);
   }
 
-  const userContent = fileLines.join("");
-
-  log("▶ Goldy is reviewing your project files...", "info");
   log(`Goldy is reading ${Object.keys(files).length} files...`, "info");
 
   const response = await client.messages.create({
     model: "claude-opus-4-5",
-    max_tokens: 4000,
-    system: systemPrompt,
+    max_tokens: 600,
+    system: `Analyze these source files and plan a rebuild as a clean static HTML/CSS/JS web app.
+Return ONLY valid JSON — no markdown, no explanation:
+{
+  "project_name": "kebab-case-name",
+  "description": "One sentence description of what this app does",
+  "files_to_generate": ["style.css", "script.js", "index.html", "README.md"]
+}
+RULES: Always list style.css first, then JS files, then HTML pages, then README.md last. Max 8 files. Only .html/.css/.js/README.md — no server files.`,
+    messages: [{ role: "user", content: fileLines.join("") }],
+  });
+
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Goldy could not plan the rebuild — no JSON returned");
+  const parsed = JSON.parse(jsonMatch[0]) as { project_name: string; description: string; files_to_generate: string[] };
+  return parsed;
+}
+
+async function generateImportFile(
+  fileName: string,
+  sourceFiles: Record<string, string>,
+  alreadyGenerated: Record<string, string>,
+  plan: { project_name: string; description: string; files_to_generate: string[] },
+  assets: { css: string; heroImageUrl: string; logoSvg: string }
+): Promise<string> {
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
+  const client = new Anthropic({ apiKey });
+
+  const cssClassSummary = assets.css ? extractCssClassSummary(assets.css) : "";
+  const isHtml = fileName.endsWith(".html");
+  const isCss = fileName === "style.css";
+
+  const assetInstructions = (isHtml || isCss) && (assets.css || assets.heroImageUrl || assets.logoSvg)
+    ? `\nDESIGN SYSTEM (assets injected after generation):
+${cssClassSummary ? `- CSS classes available: ${cssClassSummary}` : ""}
+${isCss ? `- START style.css with this exact comment on line 1: /* GOLDY_CSS_INJECT */` : ""}
+${isHtml && assets.logoSvg ? `- Navbar: use exactly <!-- GOLDY_LOGO --> where the logo goes` : ""}
+${isHtml && assets.heroImageUrl ? `- Hero element style attribute: <!-- GOLDY_HERO -->` : ""}`
+    : "";
+
+  const sourceContext = Object.entries(sourceFiles)
+    .slice(0, 8)
+    .map(([p, c]) => `=== ${p} ===\n${c.slice(0, 1500)}`)
+    .join("\n\n");
+
+  const generatedContext = Object.entries(alreadyGenerated)
+    .map(([p, c]) => `=== ${p} (already generated) ===\n${c.slice(0, 600)}`)
+    .join("\n\n");
+
+  const userContent = `Project: "${plan.project_name}"
+Description: ${plan.description}
+All files being generated: ${plan.files_to_generate.join(", ")}
+
+Original source files (for reference):
+${sourceContext}
+
+${generatedContext ? `Already generated files (stay consistent):\n${generatedContext}\n` : ""}
+Now generate ONLY the file: ${fileName}
+Output raw file content — no markdown fences, no explanation.${assetInstructions}`;
+
+  const response = await client.messages.create({
+    model: "claude-opus-4-5",
+    max_tokens: 8000,
+    system: `You are a senior front-end developer rebuilding a project as a clean static HTML/CSS/JS web app.
+Output ONLY the raw content of the requested file. No markdown. No backticks. No explanation. Just the file.
+The app must work by opening index.html with no server. Use localStorage for data persistence.`,
     messages: [{ role: "user", content: userContent }],
   });
 
-  const text =
-    response.content[0].type === "text" ? response.content[0].text : "";
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Claude did not return valid JSON");
-
-  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-  log(`✓ Goldy renamed it: "${parsed["project_name"] as string}"`, "success");
-  log(parsed["description"] as string, "info");
-  return parsed;
+  const text = response.content[0].type === "text" ? response.content[0].text : "";
+  return text.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
 }
 
 async function runImport(
@@ -253,17 +276,29 @@ async function runImport(
     const designIdea = `${projectHint}: ${Object.keys(files).slice(0, 5).join(", ")}`;
     const assets = await runDesignPipeline(designIdea, projectHint.toLowerCase().replace(/\s+/g, "-").slice(0, 30));
 
-    const spec = await callClaudeImport(files, projectHint, assets);
-    const projectName = (spec["project_name"] as string) || "imported-project";
-    const description = (spec["description"] as string) || "Imported and rebuilt by Goldy AI";
-    let outFiles = (spec["files"] as Record<string, string>) || {};
+    // Phase 1: Analyze — plan the rebuild (file list only, no code yet)
+    log("▶ Goldy is analyzing your project files...", "info");
+    const plan = await analyzeImport(files, projectHint);
+    const projectName = plan.project_name || "imported-project";
+    const description = plan.description || "Imported and rebuilt by Goldy AI";
+    const fileList = plan.files_to_generate?.length ? plan.files_to_generate : ["style.css", "index.html", "README.md"];
+    log(`✓ Goldy has the plan — "${projectName}" · ${fileList.length} files to build`, "success");
+    log(description, "info");
 
-    // Assemble: inject GPT-4o CSS, Recraft logo, FLUX hero image via placeholder replacement
+    // Phase 2: Per-file generation (each file gets full 8000 tokens)
+    const generatedFiles: Record<string, string> = {};
+    for (const fileName of fileList) {
+      log(`  ▶ Writing ${fileName}...`, "info");
+      const content = await generateImportFile(fileName, files, generatedFiles, plan, assets);
+      generatedFiles[fileName] = content;
+      log(`  ✓ ${fileName} ready (${content.length} chars)`, "success");
+    }
+
+    // Phase 3: Assemble — inject Boris's CSS, Masha's logo, Ivan's hero image
     log("▶ Goldy is assembling the crew's work...", "info");
-    outFiles = assembleDesignAssets(outFiles, assets);
+    let outFiles = assembleDesignAssets(generatedFiles, assets);
 
     log(`✓ Project ready: "${projectName}"`, "success");
-    log(`${description}`, "info");
 
     let repoUrl = "";
     let deployUrl = "";
@@ -334,6 +369,7 @@ function conditionalMulter(req: Request, res: Response, next: NextFunction) {
 }
 
 router.post("/import", requireAuth, conditionalMulter, (req, res) => {
+  clearIfTimedOut();
   if (state.status === "building") {
     res.status(409).json({ error: "A build is already in progress" });
     return;

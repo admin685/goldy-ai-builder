@@ -64,49 +64,69 @@ async function runEdit(
   try {
     const files = JSON.parse(project.files_json!) as Record<string, string>;
 
-    elog(s, "▶ Goldy is reading the current project...", "info");
-
     const apiKey = process.env["ANTHROPIC_API_KEY"];
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
-
     const client = new Anthropic({ apiKey });
 
-    const systemPrompt = `You are Goldy, an expert web developer editing an existing deployed project.
-Apply the user's requested changes and return ALL project files (including unchanged ones).
-
-RULES (follow exactly):
-- Output ONLY valid JSON — no markdown fences, no backticks, no explanation.
-- Return EVERY file that exists in the project, even if unchanged — the full set replaces what's in the database.
-- Split into proper files: index.html, style.css, script.js, plus any additional pages needed (about.html, contact.html, etc.). If the project currently has separate CSS/JS files, keep that structure.
-- Only change what the user asked for; preserve all other styling, content, and functionality.
-- Write complete file contents — no truncation, no placeholder comments.
-
-Return ONLY this JSON structure (start with { end with }, nothing else):
-{"files":{"index.html":"...complete file...","style.css":"...complete CSS...","script.js":"...complete JS...","README.md":"..."}}`;
-
-    const userContent = `Current project files:\n${JSON.stringify(files, null, 2)}\n\nInstruction: ${instruction}`;
-
-    elog(s, "▶ Goldy is thinking about your changes...", "info");
-
-    const response = await client.messages.create({
+    // Step 1 — identify which files need to change (tiny call, ~500 tokens out)
+    elog(s, "▶ Goldy is reviewing your changes...", "info");
+    const fileList = Object.keys(files).join(", ");
+    const planRes = await client.messages.create({
       model: "claude-opus-4-5",
-      max_tokens: 20000,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userContent }],
+      max_tokens: 400,
+      system: `You are Goldy, an expert web developer. Given a user's edit instruction and the list of project files, identify which files need to be modified to fulfill the instruction.
+Return ONLY valid JSON — no markdown, no explanation:
+{"files_to_edit": ["index.html"]}
+Only list files that genuinely need changing. Max 8 files.`,
+      messages: [{
+        role: "user",
+        content: `Project files: ${fileList}\n\nInstruction: ${instruction}`,
+      }],
     });
 
-    const rawText = response.content[0].type === "text" ? response.content[0].text : "";
-    const clean = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error("Goldy did not return valid JSON — please try again");
+    const planText = planRes.content[0].type === "text" ? planRes.content[0].text : "";
+    const planMatch = planText.match(/\{[\s\S]*\}/);
+    if (!planMatch) throw new Error("Goldy could not plan the edit — please try again");
+    const plan = JSON.parse(planMatch[0]) as { files_to_edit?: string[] };
+    const filesToEdit = (plan.files_to_edit ?? []).filter((f) => f in files);
+    if (filesToEdit.length === 0) throw new Error("Goldy couldn't identify which files to change — please be more specific");
 
-    const parsed = JSON.parse(match[0]) as { files?: Record<string, string> };
-    const updatedFiles = parsed.files;
-    if (!updatedFiles || Object.keys(updatedFiles).length === 0) {
-      throw new Error("Goldy returned empty files — please try a different instruction");
+    elog(s, `✓ Goldy will edit: ${filesToEdit.join(", ")}`, "success");
+
+    // Step 2 — edit each file individually (8000 tokens each, never truncated)
+    const updatedFiles = { ...files };
+    for (const fileName of filesToEdit) {
+      elog(s, `  ▶ Editing ${fileName}...`, "info");
+
+      const contextSnippets = Object.entries(updatedFiles)
+        .filter(([n]) => n !== fileName)
+        .map(([n, c]) => `=== ${n} ===\n${c.slice(0, 600)}`)
+        .join("\n\n");
+
+      const editRes = await client.messages.create({
+        model: "claude-opus-4-5",
+        max_tokens: 8000,
+        system: `You are Goldy, an expert web developer applying a targeted edit to one file of a deployed project.
+Output ONLY the complete new content of the file — no markdown fences, no backticks, no explanation.
+Write the COMPLETE file from top to bottom. Do NOT truncate or use placeholder comments like "rest of code unchanged".`,
+        messages: [{
+          role: "user",
+          content: `Edit instruction: ${instruction}
+
+Current content of ${fileName}:
+${files[fileName]}
+
+Other project files (context only — do not regenerate these):
+${contextSnippets}`,
+        }],
+      });
+
+      const editText = editRes.content[0].type === "text" ? editRes.content[0].text : "";
+      updatedFiles[fileName] = editText.replace(/^```[\w]*\n?/, "").replace(/\n?```$/, "").trim();
+      elog(s, `  ✓ ${fileName} updated (${updatedFiles[fileName].length} chars)`, "success");
     }
 
-    elog(s, `✓ Goldy updated ${Object.keys(updatedFiles).length} files`, "success");
+    elog(s, `✓ Goldy updated ${filesToEdit.length} file${filesToEdit.length !== 1 ? "s" : ""}`, "success");
 
     // Deploy to a TEMPORARY -preview Vercel project (no GitHub push, no DB write)
     let previewUrl = "";
