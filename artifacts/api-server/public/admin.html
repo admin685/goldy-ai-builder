@@ -323,7 +323,7 @@ async function renderOverview(mc) {
     <div class="two-col">
       <div class="card">
         <div class="card-title">Builds — Last 30 Days</div>
-        <canvas id="builds-chart" height="200"></canvas>
+        <div style="height:200px;position:relative"><canvas id="builds-chart"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">AI Cost Breakdown</div>
@@ -354,30 +354,43 @@ async function renderOverview(mc) {
       </table>
     </div>`;
 
-  if (chartData.length) {
-    const ctx = document.getElementById('builds-chart').getContext('2d');
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.map(d => fmtShort(d.day)),
-        datasets: [{
-          label: 'Builds',
-          data: chartData.map(d => Number(d.count)),
-          backgroundColor: 'rgba(52,211,153,0.5)',
-          borderColor: '#34D399',
-          borderWidth: 1, borderRadius: 4,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: '#7FA99A', font: { size: 10 } }, grid: { color: 'rgba(52,211,153,0.06)' } },
-          y: { beginAtZero: true, ticks: { color: '#7FA99A', stepSize: 1 }, grid: { color: 'rgba(52,211,153,0.06)' } },
-        }
-      }
-    });
+  const days30 = [];
+  const today = new Date();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    days30.push(d.toISOString().slice(0, 10));
   }
+  const countMap = {};
+  chartData.forEach(d => { countMap[d.day ? d.day.slice(0, 10) : ''] = Number(d.count); });
+  const labels = days30.map(d => { const dt = new Date(d + 'T00:00:00'); return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); });
+  const values = days30.map(d => countMap[d] || 0);
+
+  const ctx = document.getElementById('builds-chart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Builds',
+        data: values,
+        fill: true,
+        backgroundColor: 'rgba(52,211,153,0.1)',
+        borderColor: '#34D399',
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#7FA99A', font: { size: 10 }, maxTicksLimit: 10 }, grid: { color: 'rgba(52,211,153,0.06)' } },
+        y: { beginAtZero: true, ticks: { color: '#7FA99A', stepSize: 1 }, grid: { color: 'rgba(52,211,153,0.06)' } },
+      }
+    }
+  });
 }
 
 async function resetBuild() {
