@@ -27,6 +27,7 @@ const pages: [string[], string][] = [
   [["/register", "/register/", "/api/register", "/api/register/"], "register.html"],
   [["/dashboard", "/dashboard/", "/api/dashboard", "/api/dashboard/"], "dashboard.html"],
   [["/admin", "/admin/", "/api/admin", "/api/admin/"], "admin.html"],
+  [["/editor", "/editor/", "/api/editor", "/api/editor/"], "editor.html"],
 ];
 
 for (const [paths, file] of pages) {
