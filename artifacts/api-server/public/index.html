@@ -804,7 +804,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
       </div>
 
       <div id="phase2-section" style="display:none">
-        <div class="phase2-title">Add Next — Phase 2 Features</div>
+        <div class="phase2-title">Phase 2 — Add later:</div>
         <div class="phase2-chips" id="phase2-chips"></div>
       </div>
 
@@ -1072,6 +1072,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
       if (roadmapAborted) return;
       if (!res.ok) { skipRoadmap(); return; }
       currentRoadmap = await res.json();
+      window._skipRoadmapCtrl = null;
       renderRoadmapCard(currentRoadmap);
     } catch (e) {
       if (!roadmapAborted) skipRoadmap();
@@ -1093,7 +1094,7 @@ textarea#idea::placeholder { color: var(--text-muted); }
       '<div class="roadmap-sub">Here\'s what Goldy will build — and what you can add later.</div>' +
       '<div class="roadmap-grid">' + gridHtml + '</div>' +
       '<div class="roadmap-actions">' +
-        '<button class="btn" onclick="confirmBuild()">Build Phase 1</button>' +
+        '<button class="btn" onclick="confirmBuild()">Build Phase 1 →</button>' +
         '<button class="roadmap-skip" onclick="skipRoadmap()">Skip & build now</button>' +
       '</div>';
   }

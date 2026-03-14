@@ -1106,7 +1106,7 @@ Return exactly this JSON structure:
 Rules:
 - phase1 (CORE): 3-5 essential features that make a working v1. These get built now.
 - phase2 (IMPORTANT): 3-5 features the user can add later via the editor. Things like animations, extra pages, integrations.
-- phase3 (EXTRA): 2-4 nice-to-have features for the future. Advanced stuff.
+- phase3 (EXTRA): 3-5 nice-to-have features for the future. Advanced stuff.
 - Each item should be a short phrase (3-8 words).
 - Return ONLY the JSON object, nothing else.`,
         },
@@ -1132,7 +1132,7 @@ Rules:
     res.json({
       phase1: roadmap.phase1.slice(0, 5),
       phase2: roadmap.phase2.slice(0, 5),
-      phase3: roadmap.phase3.slice(0, 4),
+      phase3: roadmap.phase3.slice(0, 5),
     });
   } catch (e) {
     res.status(500).json({ error: "Failed to generate roadmap" });
