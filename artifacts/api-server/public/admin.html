@@ -220,6 +220,7 @@ const SECTIONS = [
   { id: 'projects', icon: '🏗️', label: 'Projects' },
   { id: 'deployments', icon: '🚀', label: 'Deployments' },
   { id: 'analytics', icon: '📈', label: 'Analytics' },
+  { id: 'feedback', icon: '⭐', label: 'Feedback' },
   { id: 'logs', icon: '📋', label: 'Build Logs' },
   { id: 'domains', icon: '🌐', label: 'Domains' },
   { id: 'ai', icon: '🤖', label: 'AI Settings' },
@@ -289,6 +290,7 @@ async function loadSection(id) {
     case 'projects': return renderProjects(mc);
     case 'deployments': return renderDeployments(mc);
     case 'analytics': return renderAnalytics(mc);
+    case 'feedback': return renderFeedback(mc);
     case 'logs': return renderLogs(mc);
     case 'domains': return renderDomains(mc);
     case 'ai': return renderAI(mc);
@@ -542,6 +544,37 @@ async function renderAnalytics(mc) {
     </div>`;
 }
 
+async function renderFeedback(mc) {
+  let feedback = [];
+  try { feedback = await fetchJSON(`${API}/admin/feedback`) || []; } catch {}
+
+  const goodCount = feedback.filter(f => f.rating === 'good').length;
+  const badCount = feedback.filter(f => f.rating === 'bad').length;
+
+  mc.innerHTML = `
+    <h1 class="section-title">Feedback</h1>
+    <div class="stat-grid" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-num">${feedback.length}</div><div class="stat-label">Total Ratings</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${goodCount}</div><div class="stat-label">Positive</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:var(--red)">${badCount}</div><div class="stat-label">Negative</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Recent Feedback</div>
+      <table>
+        <thead><tr><th>Project</th><th>User</th><th>Rating</th><th>Comment</th><th>Date</th></tr></thead>
+        <tbody>${feedback.length ? feedback.map(f => `
+          <tr>
+            <td>${esc(f.project_name)}</td>
+            <td>${esc(f.user_email)}</td>
+            <td>${f.rating === 'good' ? '&#128077;' : '&#128078;'}</td>
+            <td>${f.comment ? esc(f.comment) : '<span style="color:var(--text-muted)">—</span>'}</td>
+            <td>${fmt(f.created_at)}</td>
+          </tr>`).join('') : '<tr><td colspan="5" style="color:var(--text-muted)">No feedback yet</td></tr>'}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function renderLogs(mc) {
   mc.innerHTML = `
     <h1 class="section-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -599,7 +632,11 @@ function renderDomains(mc) {
 
 async function renderAI(mc) {
   let prompts = [];
-  try { prompts = await fetchJSON(`${API}/admin/prompts`) || []; } catch {}
+  let history = [];
+  try { [prompts, history] = await Promise.all([
+    fetchJSON(`${API}/admin/prompts`).then(r => r || []),
+    fetchJSON(`${API}/admin/prompt-history`).then(r => r || []),
+  ]); } catch {}
 
   const members = ['Goldy', 'Boris', 'Masha', 'Ivan'];
   const promptMap = {};
@@ -615,6 +652,22 @@ async function renderAI(mc) {
           <textarea class="prompt-textarea" id="prompt-${m}">${esc(promptMap[m] || '')}</textarea>
           <button class="btn btn-accent btn-sm" style="margin-top:8px" onclick="savePrompt('${m}')">Save ${m}'s Prompt</button>
         </div>`).join('')}
+    </div>
+    <div class="card">
+      <div class="card-title">Prompt Improvement Suggestions</div>
+      ${history.length ? history.map(h => `
+        <div style="padding:14px;background:var(--bg3);border-radius:8px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-weight:600;color:var(--text);">${esc(h.member)}</span>
+            <span style="display:flex;gap:8px;align-items:center;">
+              ${h.approved ? '<span class="status-badge done">Approved</span>' : `<button class="btn btn-accent btn-sm" onclick="approveSuggestion(${h.id}, '${esc(h.member)}')">Approve</button>`}
+              <span style="font-size:0.75rem;color:var(--text-muted);">${fmt(h.created_at)}</span>
+            </span>
+          </div>
+          ${h.rationale ? `<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:8px;font-style:italic;">${esc(h.rationale)}</div>` : ''}
+          <div style="font-size:0.78rem;color:var(--text);background:var(--bg2);padding:10px;border-radius:6px;font-family:'Menlo','Consolas',monospace;white-space:pre-wrap;max-height:120px;overflow-y:auto;">${esc(h.suggested_prompt)}</div>
+        </div>
+      `).join('') : '<div style="color:var(--text-muted);font-size:0.85rem;">No suggestions yet. The weekly improvement job reviews feedback and suggests prompt changes.</div>'}
     </div>`;
 }
 
@@ -625,6 +678,13 @@ async function savePrompt(member) {
     body: JSON.stringify({ member, prompt }),
   });
   if (r) showToast(`${member}'s prompt saved`);
+}
+
+async function approveSuggestion(id, member) {
+  const r = await adminFetch(`${API}/admin/prompt-history/${id}/approve`, { method: 'POST' });
+  if (!r) return;
+  showToast(`${member}'s prompt updated from suggestion`);
+  switchSection('ai');
 }
 
 async function renderBilling(mc) {

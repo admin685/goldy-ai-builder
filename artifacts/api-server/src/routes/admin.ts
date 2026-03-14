@@ -1,8 +1,110 @@
 import { Router } from "express";
-import { requireAdmin } from "../middlewares/auth.js";
+import { requireAdmin, requireAuth } from "../middlewares/auth.js";
 import { query, queryOne } from "../lib/db.js";
 
 const router = Router();
+
+router.post("/feedback", requireAuth, async (req, res) => {
+  const { projectId, rating, comment } = req.body as {
+    projectId?: number;
+    rating?: string;
+    comment?: string;
+  };
+  if (!projectId || !Number.isInteger(projectId) || projectId <= 0 || !rating || !["good", "bad"].includes(rating)) {
+    res.status(400).json({ error: "projectId and rating (good|bad) required" });
+    return;
+  }
+  try {
+    const project = await queryOne<{ user_id: number }>(
+      "SELECT user_id FROM projects WHERE id = $1", [projectId]
+    );
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+    if (project.user_id !== req.user!.id && req.user!.role !== "admin") {
+      res.status(403).json({ error: "Not your project" });
+      return;
+    }
+    const existing = await queryOne(
+      "SELECT id FROM build_feedback WHERE project_id = $1 AND user_id = $2",
+      [projectId, req.user!.id]
+    );
+    if (existing) {
+      await queryOne(
+        "UPDATE build_feedback SET rating = $1, comment = $2, created_at = now() WHERE project_id = $3 AND user_id = $4",
+        [rating, comment || null, projectId, req.user!.id]
+      );
+    } else {
+      await queryOne(
+        "INSERT INTO build_feedback (project_id, user_id, rating, comment) VALUES ($1, $2, $3, $4)",
+        [projectId, req.user!.id, rating, comment || null]
+      );
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to save feedback" });
+  }
+});
+
+router.get("/admin/feedback", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await query(
+      `SELECT bf.id, bf.rating, bf.comment, bf.created_at,
+              p.name AS project_name,
+              COALESCE(fu.email, pu.email) AS user_email
+       FROM build_feedback bf
+       JOIN projects p ON bf.project_id = p.id
+       JOIN users pu ON p.user_id = pu.id
+       LEFT JOIN users fu ON bf.user_id = fu.id
+       ORDER BY bf.created_at DESC
+       LIMIT 100`
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load feedback" });
+  }
+});
+
+router.get("/admin/prompt-history", requireAdmin, async (_req, res) => {
+  try {
+    const rows = await query(
+      "SELECT id, member, suggested_prompt, rationale, approved, created_at FROM prompt_history ORDER BY created_at DESC LIMIT 50"
+    );
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ error: "Failed to load prompt history" });
+  }
+});
+
+router.post("/admin/prompt-history/:id/approve", requireAdmin, async (req, res) => {
+  const id = Number(req.params["id"]);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+  try {
+    const row = await queryOne<{ member: string; suggested_prompt: string }>(
+      "SELECT member, suggested_prompt FROM prompt_history WHERE id = $1",
+      [id]
+    );
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
+    await query(
+      `CREATE TABLE IF NOT EXISTS system_prompts (
+        member TEXT PRIMARY KEY,
+        prompt TEXT,
+        updated_at TIMESTAMPTZ DEFAULT now()
+      )`
+    );
+    await queryOne(
+      `INSERT INTO system_prompts (member, prompt, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (member) DO UPDATE SET prompt = $2, updated_at = now()`,
+      [row.member, row.suggested_prompt]
+    );
+    await queryOne("UPDATE prompt_history SET approved = TRUE WHERE id = $1", [id]);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to approve suggestion" });
+  }
+});
 
 router.get("/admin/stats", requireAdmin, async (_req, res) => {
   try {

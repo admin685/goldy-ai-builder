@@ -1,5 +1,6 @@
 import app from "./app.js";
 import { seedAdmin } from "./lib/seed-admin.js";
+import { startWeeklyJob } from "./lib/weeklyJob.js";
 
 const rawPort = process.env["PORT"];
 
@@ -15,4 +16,5 @@ if (Number.isNaN(port) || port <= 0) {
 app.listen(port, async () => {
   console.log(`Server listening on port ${port}`);
   await seedAdmin();
+  await startWeeklyJob();
 });

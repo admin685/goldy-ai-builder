@@ -37,14 +37,15 @@ artifacts/api-server/
 │   ├── lib/
 │   │   ├── db.ts          — pg Pool, query/queryOne helpers
 │   │   ├── projects.ts    — saveProject() INSERT
-│   │   └── seed-admin.ts  — creates admin user on first boot
+│   │   ├── seed-admin.ts  — creates admin user on first boot
+│   │   └── weeklyJob.ts   — weekly prompt improvement job (Claude reviews feedback → prompt_history)
 │   └── routes/
 │       ├── index.ts       — mounts all routers
 │       ├── auth.ts        — /register, /login, /auth/projects, /auth/admin/*
 │       ├── build.ts       — 5-stage build pipeline + /build, /status, /domain, /admin/reset-build
 │       ├── import.ts      — /import (ZIP / GitHub / Replit) with per-file rebuild
 │       ├── edit.ts        — /edit, /edit/confirm, /edit/discard, /edit/status, /edit/history
-│       ├── admin.ts       — admin dashboard endpoints: analytics, prompts, billing, settings, user/project mgmt
+│       ├── admin.ts       — admin endpoints: analytics, prompts, billing, settings, user/project mgmt, feedback, prompt-history
 │       └── health.ts      — /healthz
 ├── public/
 │   ├── index.html         — landing page
@@ -59,9 +60,13 @@ artifacts/api-server/
 ## DB Schema (PostgreSQL)
 
 ```sql
-users        (id SERIAL PK, email TEXT UNIQUE, password_hash TEXT, role TEXT default 'user', created_at)
-projects     (id SERIAL PK, user_id INT FK, name TEXT, vercel_url TEXT, github_url TEXT, files_json TEXT, created_at)
-edit_history (id SERIAL PK, project_id INT FK, role TEXT, message TEXT, created_at)
+users          (id SERIAL PK, email TEXT UNIQUE, password_hash TEXT, role TEXT default 'user', created_at)
+projects       (id SERIAL PK, user_id INT FK, name TEXT, vercel_url TEXT, github_url TEXT, files_json TEXT, created_at)
+edit_history   (id SERIAL PK, project_id INT FK, role TEXT, message TEXT, created_at)
+build_feedback (id SERIAL PK, project_id INT FK, rating VARCHAR(4) CHECK good/bad, comment TEXT, created_at)
+prompt_history (id SERIAL PK, member TEXT, suggested_prompt TEXT, rationale TEXT, approved BOOL, created_at)
+system_prompts (member TEXT PK, prompt TEXT, updated_at)
+admin_settings (key TEXT PK, value TEXT, updated_at)
 ```
 
 `files_json` is a JSON string of `Record<string, string>` — all project file paths and their contents. The project list API deliberately does NOT select this column (too large). The editor fetches it separately.

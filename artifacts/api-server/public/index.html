@@ -808,6 +808,15 @@ textarea#idea::placeholder { color: var(--text-muted); }
         </div>
       </div>
 
+      <div id="feedback-row" style="display:none;margin-top:20px;padding:16px;background:var(--bg);border:1px solid var(--bg3);border-radius:var(--radius);text-align:center;">
+        <div style="font-size:0.88rem;color:var(--text-muted);margin-bottom:10px;">Was this build good?</div>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <button id="fb-good" class="btn-secondary" style="font-size:1.1rem;padding:8px 24px;" onclick="sendFeedback('good')">&#128077; Yes</button>
+          <button id="fb-bad" class="btn-secondary" style="font-size:1.1rem;padding:8px 24px;" onclick="sendFeedback('bad')">&#128078; No</button>
+        </div>
+        <div id="fb-thanks" style="display:none;color:var(--accent);font-weight:600;font-size:0.9rem;margin-top:8px;">Thanks for your feedback!</div>
+      </div>
+
       <div id="phase2-section" style="display:none">
         <div class="phase2-title">Phase 2 — Add later:</div>
         <div class="phase2-chips" id="phase2-chips"></div>
@@ -842,6 +851,29 @@ textarea#idea::placeholder { color: var(--text-muted); }
   let importMode   = 'zip';
   let currentRoadmap = null;
   let currentIdea    = '';
+  let currentProjectId = null;
+
+  async function sendFeedback(rating) {
+    if (!currentProjectId) return;
+    document.getElementById('fb-good').disabled = true;
+    document.getElementById('fb-bad').disabled = true;
+    try {
+      const res = await fetch(`${API}/feedback`, {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ projectId: currentProjectId, rating }),
+      });
+      if (res.ok) {
+        document.getElementById('fb-thanks').style.display = 'block';
+      } else {
+        document.getElementById('fb-good').disabled = false;
+        document.getElementById('fb-bad').disabled = false;
+      }
+    } catch {
+      document.getElementById('fb-good').disabled = false;
+      document.getElementById('fb-bad').disabled = false;
+    }
+  }
 
   // ── Initialise ──────────────────────────────────────────────────────────
   switchTab('build');
@@ -1313,7 +1345,13 @@ textarea#idea::placeholder { color: var(--text-muted); }
     }
 
     if (result.projectId) {
+      currentProjectId = result.projectId;
       document.getElementById('domain-section').style.display = 'block';
+      const fbRow = document.getElementById('feedback-row');
+      fbRow.style.display = 'block';
+      document.getElementById('fb-good').disabled = false;
+      document.getElementById('fb-bad').disabled = false;
+      document.getElementById('fb-thanks').style.display = 'none';
 
       if (currentRoadmap && currentRoadmap.phase2 && currentRoadmap.phase2.length > 0) {
         const p2sec = document.getElementById('phase2-section');
@@ -1354,7 +1392,9 @@ textarea#idea::placeholder { color: var(--text-muted); }
     document.getElementById('import-btn').disabled  = false;
     currentRoadmap = null;
     currentIdea = '';
+    currentProjectId = null;
     selectedFile = null;
+    document.getElementById('feedback-row').style.display = 'none';
     const sel = document.getElementById('drop-selected');
     if (sel) { sel.style.display = 'none'; }
     const icon = document.querySelector('.drop-icon');
