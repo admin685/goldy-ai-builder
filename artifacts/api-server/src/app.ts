@@ -1,9 +1,17 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import path from "path";
+import { fileURLToPath } from "url";
 import router from "./routes/index.js";
 
-declare const __dirname: string;
+let __appdir: string;
+try {
+  __appdir = typeof __dirname !== "undefined"
+    ? __dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+} catch {
+  __appdir = process.cwd();
+}
 
 const app: Express = express();
 
@@ -11,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const publicDir = path.join(__dirname, "..", "public");
+const publicDir = path.join(__appdir, "..", "public");
 const serve = (name: string) => path.join(publicDir, name);
 
 // API routes first — before any HTML serving

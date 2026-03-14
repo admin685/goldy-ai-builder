@@ -296,6 +296,113 @@ textarea#idea::placeholder { color: var(--text-muted); }
   margin-bottom: 16px;
 }
 
+/* ── Roadmap card ── */
+#roadmap-card { display: none; }
+
+.roadmap-header {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  letter-spacing: 1px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+
+.roadmap-sub {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+}
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) {
+  .roadmap-grid { grid-template-columns: 1fr; }
+}
+
+.roadmap-col {
+  background: var(--bg);
+  border: 1px solid var(--bg3);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.roadmap-col-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roadmap-col.core .roadmap-col-title   { color: var(--green); }
+.roadmap-col.important .roadmap-col-title { color: var(--gold); }
+.roadmap-col.extra .roadmap-col-title  { color: var(--text-muted); }
+
+.roadmap-items { list-style: none; padding: 0; margin: 0; }
+.roadmap-items li {
+  font-size: 0.88rem;
+  color: var(--text);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--bg3);
+}
+.roadmap-items li:last-child { border-bottom: none; }
+
+.roadmap-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.roadmap-skip {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.roadmap-skip:hover { color: var(--text); }
+
+/* ── Phase 2 chips in result ── */
+#phase2-section { margin-top: 20px; }
+
+.phase2-title {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.phase2-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.phase2-chip {
+  display: inline-block;
+  padding: 6px 14px;
+  border: 1px solid var(--bg3);
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.phase2-chip:hover { border-color: var(--gold); color: var(--gold); }
+
 /* ── Status section ── */
 #status-section { display: none; }
 
@@ -645,6 +752,30 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
   </div>
 
+  <!-- ── Roadmap card (shown between input and build) ──────────────────── -->
+  <div class="card" id="roadmap-card">
+    <div class="roadmap-header">Build Roadmap</div>
+    <div class="roadmap-sub">Here's what Goldy will build — and what you can add later.</div>
+    <div class="roadmap-grid">
+      <div class="roadmap-col core">
+        <div class="roadmap-col-title"><span>&#9679;</span> Phase 1 — Core</div>
+        <ul class="roadmap-items" id="roadmap-phase1"></ul>
+      </div>
+      <div class="roadmap-col important">
+        <div class="roadmap-col-title"><span>&#9679;</span> Phase 2 — Add Later</div>
+        <ul class="roadmap-items" id="roadmap-phase2"></ul>
+      </div>
+      <div class="roadmap-col extra">
+        <div class="roadmap-col-title"><span>&#9679;</span> Phase 3 — Future</div>
+        <ul class="roadmap-items" id="roadmap-phase3"></ul>
+      </div>
+    </div>
+    <div class="roadmap-actions">
+      <button class="btn" id="roadmap-build-btn" onclick="confirmBuild()">Build Phase 1</button>
+      <button class="roadmap-skip" onclick="skipRoadmap()">Skip & build now</button>
+    </div>
+  </div>
+
   <!-- ── Status card (hidden until build starts) ────────────────────────── -->
   <div class="card" id="status-section">
 
@@ -693,6 +824,11 @@ textarea#idea::placeholder { color: var(--text-muted); }
         </div>
       </div>
 
+      <div id="phase2-section" style="display:none">
+        <div class="phase2-title">Add Next — Phase 2 Features</div>
+        <div class="phase2-chips" id="phase2-chips"></div>
+      </div>
+
       <button class="btn-reset" onclick="resetForm()">Build Another Project</button>
     </div>
 
@@ -720,6 +856,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
   let selectedFile = null;
   let activeTab    = 'build';
   let importMode   = 'zip';
+  let currentRoadmap = null;
+  let currentIdea    = '';
 
   // ── Initialise ──────────────────────────────────────────────────────────
   switchTab('build');
@@ -929,7 +1067,60 @@ textarea#idea::placeholder { color: var(--text-muted); }
     const idea = document.getElementById('idea').value.trim();
     if (!idea) { document.getElementById('idea').focus(); return; }
 
+    currentIdea = idea;
     document.getElementById('build-btn').disabled = true;
+    document.getElementById('build-btn').textContent = 'Analyzing…';
+
+    try {
+      const res = await fetch(`${API}/roadmap`, {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ idea }),
+      });
+      if (!res.ok) {
+        document.getElementById('build-btn').disabled = false;
+        document.getElementById('build-btn').textContent = 'Build my project';
+        doBuild(idea);
+        return;
+      }
+      currentRoadmap = await res.json();
+      showRoadmap(currentRoadmap);
+    } catch (e) {
+      document.getElementById('build-btn').disabled = false;
+      document.getElementById('build-btn').textContent = 'Build my project';
+      doBuild(idea);
+    }
+  }
+
+  function showRoadmap(roadmap) {
+    document.getElementById('input-card').style.display  = 'none';
+    document.getElementById('roadmap-card').style.display = 'block';
+
+    ['phase1', 'phase2', 'phase3'].forEach(key => {
+      const ul = document.getElementById('roadmap-' + key);
+      ul.innerHTML = '';
+      (roadmap[key] || []).forEach(item => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+    });
+  }
+
+  function confirmBuild() {
+    document.getElementById('roadmap-card').style.display = 'none';
+    doBuild(currentIdea);
+  }
+
+  function skipRoadmap() {
+    currentRoadmap = null;
+    document.getElementById('roadmap-card').style.display = 'none';
+    doBuild(currentIdea);
+  }
+
+  async function doBuild(idea) {
+    document.getElementById('build-btn').disabled = true;
+    document.getElementById('build-btn').textContent = 'Build my project';
     showStatus();
     startAnimation();
 
@@ -983,8 +1174,10 @@ textarea#idea::placeholder { color: var(--text-muted); }
   // ── Status polling ──────────────────────────────────────────────────────
   function showStatus() {
     document.getElementById('input-card').style.display    = 'none';
+    document.getElementById('roadmap-card').style.display  = 'none';
     document.getElementById('status-section').style.display = 'block';
     document.getElementById('result-card').style.display   = 'none';
+    document.getElementById('phase2-section').style.display = 'none';
     document.getElementById('log-panel').innerHTML = '';
     document.getElementById('result-links').innerHTML = '';
     document.getElementById('stats-row').innerHTML = '';
@@ -1123,6 +1316,21 @@ textarea#idea::placeholder { color: var(--text-muted); }
 
     if (result.projectId) {
       document.getElementById('domain-section').style.display = 'block';
+
+      if (currentRoadmap && currentRoadmap.phase2 && currentRoadmap.phase2.length > 0) {
+        const p2sec = document.getElementById('phase2-section');
+        const p2chips = document.getElementById('phase2-chips');
+        p2chips.innerHTML = '';
+        currentRoadmap.phase2.forEach(feature => {
+          const chip = document.createElement('a');
+          chip.className = 'phase2-chip';
+          chip.textContent = feature;
+          chip.href = '/editor?id=' + result.projectId + '&instruction=' + encodeURIComponent('Add: ' + feature);
+          chip.target = '_self';
+          p2chips.appendChild(chip);
+        });
+        p2sec.style.display = 'block';
+      }
     }
   }
 
@@ -1142,8 +1350,12 @@ textarea#idea::placeholder { color: var(--text-muted); }
     document.getElementById('input-card').style.display     = 'block';
     document.getElementById('status-section').style.display = 'none';
     document.getElementById('result-card').style.display    = 'none';
+    document.getElementById('roadmap-card').style.display   = 'none';
+    document.getElementById('phase2-section').style.display = 'none';
     document.getElementById('build-btn').disabled   = false;
     document.getElementById('import-btn').disabled  = false;
+    currentRoadmap = null;
+    currentIdea = '';
     selectedFile = null;
     const sel = document.getElementById('drop-selected');
     if (sel) { sel.style.display = 'none'; }

@@ -1071,6 +1071,74 @@ async function runBuild(idea: string) {
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
+router.post("/roadmap", requireAuth, async (req, res) => {
+  const { idea } = req.body as { idea?: string };
+  if (!idea || idea.trim().length < 5) {
+    res.status(400).json({ error: "Please provide a project idea" });
+    return;
+  }
+
+  const apiKey = process.env["ANTHROPIC_API_KEY"];
+  if (!apiKey) {
+    res.status(500).json({ error: "Anthropic API key not configured" });
+    return;
+  }
+
+  try {
+    const claude = new Anthropic({ apiKey });
+    const msg = await claude.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 600,
+      messages: [
+        {
+          role: "user",
+          content: `Analyze this project idea and split it into 3 build phases. Return ONLY valid JSON, no markdown.
+
+Project idea: "${idea.trim()}"
+
+Return exactly this JSON structure:
+{
+  "phase1": ["feature 1", "feature 2", ...],
+  "phase2": ["feature 1", "feature 2", ...],
+  "phase3": ["feature 1", "feature 2", ...]
+}
+
+Rules:
+- phase1 (CORE): 3-5 essential features that make a working v1. These get built now.
+- phase2 (IMPORTANT): 3-5 features the user can add later via the editor. Things like animations, extra pages, integrations.
+- phase3 (EXTRA): 2-4 nice-to-have features for the future. Advanced stuff.
+- Each item should be a short phrase (3-8 words).
+- Return ONLY the JSON object, nothing else.`,
+        },
+      ],
+    });
+
+    const text =
+      msg.content[0].type === "text" ? msg.content[0].text.trim() : "";
+    const cleaned = text.replace(/^```json?\s*/i, "").replace(/```\s*$/, "");
+    const roadmap = JSON.parse(cleaned);
+
+    const isStrArr = (v: unknown): v is string[] =>
+      Array.isArray(v) && v.every((s) => typeof s === "string" && s.length < 200);
+
+    if (
+      !isStrArr(roadmap.phase1) ||
+      !isStrArr(roadmap.phase2) ||
+      !isStrArr(roadmap.phase3)
+    ) {
+      throw new Error("Invalid roadmap structure");
+    }
+
+    res.json({
+      phase1: roadmap.phase1.slice(0, 6),
+      phase2: roadmap.phase2.slice(0, 6),
+      phase3: roadmap.phase3.slice(0, 5),
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to generate roadmap" });
+  }
+});
+
 router.post("/build", requireAuth, (req, res) => {
   const { idea } = req.body as { idea?: string };
 

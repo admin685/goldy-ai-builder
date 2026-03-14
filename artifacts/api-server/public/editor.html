@@ -294,6 +294,11 @@
 
       // Load history
       await loadHistory();
+
+      const prefill = params.get('instruction');
+      if (prefill) {
+        document.getElementById('instruction').value = prefill;
+      }
     } catch (e) {
       console.error('Init error:', e);
     }
