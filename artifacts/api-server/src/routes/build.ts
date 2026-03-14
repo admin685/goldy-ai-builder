@@ -616,9 +616,13 @@ Max 1500 tokens. Create a concise design system with:
       }),
     });
 
+    const rawBody = await res.text();
+    console.log(`[DIAG] GPT-4o HTTP ${res.status} | first 200 chars: ${rawBody.slice(0, 200)}`);
+    log(`[DIAG] GPT-4o HTTP ${res.status}`, res.ok ? "info" : "warn");
     if (!res.ok) { log(`GPT-4o CSS failed: ${res.status}`, "warn"); return; }
-    const data = (await res.json()) as { choices: Array<{ message: { content: string } }> };
+    const data = JSON.parse(rawBody) as { choices: Array<{ message: { content: string } }> };
     const css = data.choices[0]?.message?.content?.trim() ?? "";
+    log(`[DIAG] GPT-4o first 200 chars of CSS: ${css.slice(0, 200)}`, "info");
     state.stageData.css = css;
     state.stageData.cssClassSummary = extractCssClassSummary(css);
     log(`✓ Stage 2a complete — CSS ready (${css.length} chars, classes: ${state.stageData.cssClassSummary.slice(0, 80)}...)`, "success");
@@ -642,9 +646,13 @@ async function handleRecraft(idea: string): Promise<void> {
       body: JSON.stringify({ prompt, style: "vector_illustration", response_format: "url", n: 1 }),
     });
 
+    const recraftBody = await res.text();
+    console.log(`[DIAG] Recraft HTTP ${res.status} | first 200 chars: ${recraftBody.slice(0, 200)}`);
+    log(`[DIAG] Recraft HTTP ${res.status}`, res.ok ? "info" : "warn");
     if (!res.ok) { log(`Recraft logo failed: ${res.status}`, "warn"); return; }
-    const data = (await res.json()) as { data?: Array<{ url?: string }> };
+    const data = JSON.parse(recraftBody) as { data?: Array<{ url?: string }> };
     const url = data.data?.[0]?.url ?? "";
+    log(`[DIAG] Recraft logo URL (first 200): ${url.slice(0, 200)}`, "info");
     if (url) {
       state.stageData.logoUrl = url;
       log("✓ Stage 2b complete — logo URL ready", "success");
@@ -671,8 +679,11 @@ async function handleFlux(idea: string): Promise<void> {
       body: JSON.stringify({ input: { prompt, num_outputs: 1, aspect_ratio: "16:9", output_format: "webp", output_quality: 80 } }),
     });
 
+    const fluxBody = await createRes.text();
+    console.log(`[DIAG] FLUX HTTP ${createRes.status} | first 200 chars: ${fluxBody.slice(0, 200)}`);
+    log(`[DIAG] FLUX HTTP ${createRes.status}`, createRes.ok ? "info" : "warn");
     if (!createRes.ok) { log(`FLUX failed: ${createRes.status}`, "warn"); return; }
-    const prediction = (await createRes.json()) as { id: string; status: string; output?: string[]; urls?: { get: string } };
+    const prediction = JSON.parse(fluxBody) as { id: string; status: string; output?: string[]; urls?: { get: string } };
 
     let imageUrl = prediction.output?.[0] ?? "";
     if (!imageUrl && prediction.status !== "succeeded" && prediction.urls?.get) {
@@ -713,46 +724,53 @@ async function handleCode(idea: string): Promise<void> {
     heroImageUrl ? `On the hero element, place: <!-- GOLDY_HERO --> as the element's style attribute value.` : "",
   ].filter(Boolean).join("\n");
 
-  const systemPrompt = `You are a senior full-stack developer. Build a complete, deployable static web project.
+  const systemPrompt = `You are a senior web developer. Generate a deployable static website.
 
-CRITICAL RULES:
-- Generate REAL, working code. Not pseudocode, not placeholders.
-- Output ONLY static files (HTML, CSS, JS). No server-side code.
-- Use vanilla JS only — no React, no frameworks, no CDN imports.
-- Store data in localStorage where appropriate.
-- The app must work by opening index.html in a browser with no server.
-- Make the UI genuinely beautiful: dark theme (#0d1117 background), gold accents (#FFD700), clean layout.
+RULES (follow exactly):
+- Output ONLY valid JSON — no markdown fences, no backticks, no explanation before or after.
+- Generate EXACTLY 2 files: index.html and README.md. No more.
+- index.html: ONE self-contained file. Inline all CSS in a <style> tag. Inline all JS in a <script> tag. No external CDN.
+- Keep index.html under 350 lines total. Write clean, minimal code — no lorem ipsum filler blocks.
+- Make the UI beautiful: clean layout, great typography, proper spacing.
 
-DESIGN SYSTEM (injection — read carefully):
+DESIGN INJECTION (do exactly as instructed):
 ${designContext}
 
-Output format — return ONLY valid JSON, no markdown fences, no explanation:
-{
-  "project_name": "kebab-case-name",
-  "project_type": "webapp",
-  "tech_stack": "HTML/CSS/JavaScript",
-  "description": "One sentence description",
-  "features": ["Feature 1", "Feature 2", "Feature 3"],
-  "files": {
-    "index.html": "<!DOCTYPE html>... complete file with <!-- GOLDY_CSS --> in head ...",
-    "README.md": "# Project Name\\n..."
-  }
-}`;
+Return this JSON structure — start with { and end with }, nothing else:
+{"project_name":"kebab-name","project_type":"webapp","tech_stack":"HTML/CSS/JS","description":"one sentence","features":["feat1","feat2"],"files":{"index.html":"...complete file...","README.md":"# Title\\n..."}}`;
+
 
   const userContent = `Project: "${projectName}"\nDescription: ${description}\nFiles to generate: ${fileList.join(", ")}\n\nIdea: ${idea}`;
 
   const response = await client.messages.create({
     model: "claude-opus-4-5",
-    max_tokens: 4000,
+    max_tokens: 12000,
     system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
   });
 
-  const text = response.content[0].type === "text" ? response.content[0].text : "";
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("Claude did not return valid JSON in CODE stage");
+  const stopReason = response.stop_reason;
+  console.log(`[DIAG] Claude CODE stop_reason: ${stopReason} | output tokens: ${response.usage?.output_tokens ?? "?"}`);
+  log(`[DIAG] Claude CODE stop_reason: ${stopReason} | output tokens: ${response.usage?.output_tokens ?? "?"}`, "info");
 
-  const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  const rawText = response.content[0].type === "text" ? response.content[0].text : "";
+  // Strip markdown fences if Claude wrapped in ```json ... ```
+  const text = rawText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+  const jsonMatch = text.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    console.log(`[DIAG] Claude CODE raw output (first 500): ${rawText.slice(0, 500)}`);
+    log(`[DIAG] Claude CODE raw output (first 500): ${rawText.slice(0, 500)}`, "warn");
+    throw new Error("Claude did not return valid JSON in CODE stage");
+  }
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+  } catch (parseErr) {
+    console.log(`[DIAG] Claude CODE JSON parse failed. Matched text (first 300): ${jsonMatch[0].slice(0, 300)}`);
+    log(`[DIAG] Claude CODE JSON parse error: ${(parseErr as Error).message}`, "warn");
+    throw new Error(`Claude CODE returned malformed JSON: ${(parseErr as Error).message}`);
+  }
   state.stageData.files = (parsed["files"] as Record<string, string>) ?? {};
   state.stageData.features = (parsed["features"] as string[]) ?? [];
   state.stageData.projectName = (parsed["project_name"] as string) || projectName;
@@ -777,9 +795,14 @@ function handleAssemble(): void {
 
   let html = files["index.html"];
 
-  if (css && html.includes("<!-- GOLDY_CSS -->")) {
+  const cssPlaceholderFound = html.includes("<!-- GOLDY_CSS -->");
+  console.log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`);
+  log(`[DIAG] GOLDY_CSS placeholder found: ${cssPlaceholderFound}`, "info");
+  if (css && cssPlaceholderFound) {
     html = html.replace("<!-- GOLDY_CSS -->", `<style>\n${css}\n</style>`);
-    log("  ✓ Injected GPT-4o CSS", "info");
+    log("  ✓ Injected GPT-4o CSS — placeholder replaced", "info");
+  } else if (!cssPlaceholderFound) {
+    log("  ⚠ GOLDY_CSS placeholder NOT found in index.html", "warn");
   }
 
   if (logoUrl && html.includes("<!-- GOLDY_LOGO -->")) {
@@ -825,6 +848,8 @@ async function handleDeploy(): Promise<void> {
     try {
       const vercelResult = await deployToVercel(projectName, files);
       deployUrl = vercelResult.url;
+      console.log(`[DIAG] Vercel deploy URL: ${deployUrl}`);
+      log(`[DIAG] Vercel URL: ${deployUrl}`, "info");
       projectId = vercelResult.projectId;
       deploymentName = vercelResult.deploymentName;
       state.stageData.deployUrl = deployUrl;
