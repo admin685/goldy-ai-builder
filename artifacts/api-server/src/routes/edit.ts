@@ -134,6 +134,8 @@ ${contextSnippets}`,
         "UPDATE projects SET files_json = $1 WHERE id = $2",
         [JSON.stringify(updatedFiles), project.id]
       );
+      console.log('DB SAVE: project', project.id, 'files:', Object.keys(updatedFiles));
+      console.log('DB SAVE: index.html length:', updatedFiles['index.html']?.length);
       elog(s, "✓ Changes saved to database", "success");
     } catch (dbErr) {
       console.error("Failed to save files_json to DB:", dbErr);
@@ -280,7 +282,11 @@ router.get("/preview/:projectId", async (req, res) => {
     if (!project) { res.status(404).send("Project not found"); return; }
     if (!project.files_json) { res.send(PLACEHOLDER_HTML("No files yet — send an edit to get started.")); return; }
 
+    console.log('PREVIEW REQUEST: projectId:', projectId);
+    console.log('PREVIEW: files_json type:', typeof project.files_json);
     const files = parseFilesJson(project.files_json);
+    console.log('PREVIEW: files keys:', Object.keys(files || {}).slice(0, 5));
+    console.log('PREVIEW: index.html length:', (files as Record<string,string> | null)?.['index.html']?.length);
     if (!files) { res.status(500).send("Failed to parse project files"); return; }
 
     const html = findHtmlContent(files);

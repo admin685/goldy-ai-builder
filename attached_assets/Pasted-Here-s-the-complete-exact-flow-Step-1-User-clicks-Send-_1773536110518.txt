@@ -1,0 +1,66 @@
+Here's the complete, exact flow:
+
+Step 1 — User clicks Send
+sendEdit() fires. It POSTs to POST /api/edit with:
+
+{ "projectId": 42, "instruction": "make the background red" }
+The server immediately returns 200 OK and kicks off runEdit() in the background (fire-and-forget). The frontend then starts polling /api/edit/status?projectId=42 every 1.5 seconds.
+
+Step 2 — runEdit() inside edit.ts
+1. Loads project from DB → gets files_json (all the project's HTML/CSS/JS)
+2. Asks Claude which files need to be changed (a planning call)
+3. Loops over each file that needs editing:
+   - Sends Claude the current file content + other files as context
+   - Claude returns the COMPLETE new file content
+   - Stores the result in updatedFiles[fileName]
+4. Logs progress via elog() — which is what the overlay log panel shows
+Claude receives the files as plain text in the user message:
+
+Current content of index.html:
+<entire file here>
+Other project files (context only):
+=== style.css ===
+<first 600 chars>...
+Step 3 — After Claude returns (where files are stored)
+Both — in this order:
+
+DB first (as of Task #27): Writes updatedFiles to projects.files_json immediately with UPDATE projects SET files_json = $1 WHERE id = $2
+Memory second: Also stores in s.pendingFiles and sets s.status = "preview"
+The edit state object s lives in a Map<projectId, EditState> in server memory.
+
+Step 4 — How the preview iframe updates
+When polling detects status === "preview", onPreviewReady() runs. It sets the iframe src to:
+
+/api/preview/42?pending=1
+The preview route sees ?pending=1 → looks up editStates.get(42) → reads s.pendingFiles from memory → serves the HTML.
+
+Without ?pending=1 it reads files_json from the DB — which, post Task #27, is also the updated version.
+
+Step 5 — User clicks "Looks good — Deploy"
+onDeploy() fires. POSTs to POST /api/edit/confirm:
+
+{ "projectId": 42 }
+runConfirm() does:
+
+Pushes all files to GitHub (one commit per file)
+Triggers a Vercel deploy
+Writes files_json, vercel_url, github_url back to the DB
+Sets s.status = "done"
+Frontend polls, detects done, calls onConfirmDone() which refreshes the iframe to the DB preview URL (now showing the deployed version).
+
+Why the preview was showing the old version
+The root cause was this race condition in the original code:
+
+                    ┌─ DB (old files_json) ◄─── iframe loads this
+runEdit() finishes ─┤
+                    └─ s.pendingFiles (new)  ◄── only ?pending=1 reads this
+onPreviewReady() was already setting ?pending=1 on the iframe URL, so in theory it should have worked. But there's a subtlety:
+
+?pending=1 reads from server memory. If the server restarts between the edit finishing and the user viewing the preview — s.pendingFiles is gone, and the route falls through to the DB, which had the old data.
+
+Also: on first page load, init() sets the iframe to /api/preview/42 (no ?pending=1). If the user refreshes the editor page mid-edit-session, the pending state in memory is read but the iframe is pointing at the DB URL — old content.
+
+Task #27's fix: files_json is now written to the DB immediately after Claude finishes, before setting s.status = "preview". So both the pending URL and the plain DB URL now serve Claude's latest output — no dependency on the in-memory state surviving.
+
+
+Scroll to latest
