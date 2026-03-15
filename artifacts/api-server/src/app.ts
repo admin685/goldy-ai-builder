@@ -22,7 +22,10 @@ app.use(express.urlencoded({ extended: true }));
 const publicDir = path.join(__appdir, "..", "public");
 const serve = (name: string) => path.join(publicDir, name);
 
-// API routes first — before any HTML serving
+// Static assets — served first so images/css/js are never blocked by route handlers
+app.use(express.static(publicDir));
+
+// API routes
 app.use("/api", router);
 
 // Public HTML pages
@@ -41,8 +44,5 @@ for (const [paths, file] of pages) {
     app.get(p === "" ? "/" : p, (_req, res) => res.sendFile(serve(file)));
   }
 }
-
-// Static assets
-app.use(express.static(publicDir));
 
 export default app;
