@@ -1,0 +1,32 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ZlYnG8WtWeOQ31_-qY3vN"
+uri = "file://artifacts/api-server/public/goldy-mascot.png"
+type = "image"
+title = "Goldy — Gold hard hat, wrench, thumbs up"
+
+[[outputs]]
+id = "veqM-9A5DM_XO0SkK3oq5"
+uri = "file://artifacts/api-server/public/boris.png"
+type = "image"
+title = "Boris — Blue hard hat, paintbrush"
+
+[[outputs]]
+id = "MfGlLuJ0rRNNRofJSPR1w"
+uri = "file://artifacts/api-server/public/masha.png"
+type = "image"
+title = "Masha — Pink hard hat, sketchbook"
+
+[[outputs]]
+id = "D_Q-zxD0TRtlJT-j_sUDZ"
+uri = "file://artifacts/api-server/public/ivan.png"
+type = "image"
+title = "Ivan — Green hard hat, camera"
+
+[[outputs]]
+id = "1wzAnfXAFfXQmDu6Sh_Zv"
+uri = "file://artifacts/api-server/public/petya.png"
+type = "image"
+title = "Petya — White hard hat, laptop"
