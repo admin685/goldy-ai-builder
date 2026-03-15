@@ -1,0 +1,302 @@
+# Task #30 — Full System Audit & Fix
+
+## What & Why
+
+The platform has accumulated many bugs that keep reappearing. Instead of fixing
+one bug at a time, do a complete system audit and fix ALL issues in one pass.
+
+## Current known problem
+
+`Bad Gateway: unknown port` on goldy-ai-builder.replit.app — server not starting
+after deployment.
+
+---
+
+## Part 1 — Deployment Fix (CRITICAL, do first)
+
+### 1.1 Check why server fails to start
+
+Run these checks:
+```bash
+# Check what port the server listens on
+grep -r "PORT\|listen\|8080" artifacts/api-server/src/app.ts
+
+# Check if build output exists
+ls -la artifacts/api-server/dist/
+
+# Check package.json start scripts
+cat package.json
+cat artifacts/api-server/package.json
+
+# Check .replit deployment config
+cat .replit
+```
+
+### 1.2 Fix port configuration
+
+The server MUST listen on the PORT environment variable that Replit provides:
+```javascript
+// In app.ts — ensure this is correct:
+const PORT = parseInt(process.env.PORT || '8080', 10)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`)
+})
+```
+
+`0.0.0.0` is critical — without it Replit can't route traffic to the server.
+
+### 1.3 Fix .replit deployment config
+
+Ensure `.replit` has:
+```toml
+[deployment]
+run = ["pnpm", "--filter", "@workspace/api-server", "run", "start"]
+build = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
+```
+
+### 1.4 Rebuild and test
+
+```bash
+cd artifacts/api-server && pnpm run build
+# Confirm dist/index.cjs exists and is not empty
+ls -la dist/
+```
+
+---
+
+## Part 2 — Complete System Health Check
+
+After fixing deployment, run these checks on EVERY part of the system:
+
+### 2.1 API Endpoints Check
+
+Test every endpoint and report ✅ / ⚠️ / ❌:
+
+```bash
+BASE="http://localhost:8080"
+
+# Auth
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/auth/register \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"Test123!"}'
+
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/auth/login \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"email":"test@test.com","password":"Test123!"}'
+
+# Build
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/status
+
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/roadmap \
+  -X POST -H "Content-Type: application/json" \
+  -d '{"idea":"simple todo app"}'
+
+# Admin
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/admin/stats \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+
+# Preview
+curl -s -o /dev/null -w "%{http_code}" $BASE/api/preview/1
+
+# Pages
+curl -s -o /dev/null -w "%{http_code}" $BASE/
+curl -s -o /dev/null -w "%{http_code}" $BASE/app
+curl -s -o /dev/null -w "%{http_code}" $BASE/login
+curl -s -o /dev/null -w "%{http_code}" $BASE/register
+curl -s -o /dev/null -w "%{http_code}" $BASE/dashboard
+curl -s -o /dev/null -w "%{http_code}" $BASE/admin
+curl -s -o /dev/null -w "%{http_code}" $BASE/editor
+```
+
+Expected: all return 200 or 401 (not 404 or 500).
+
+### 2.2 Database Check
+
+```sql
+-- Check all tables exist
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+ORDER BY table_name;
+
+-- Check data
+SELECT COUNT(*) as users FROM users;
+SELECT COUNT(*) as projects FROM projects;
+SELECT COUNT(*) as feedback FROM build_feedback;
+SELECT COUNT(*) as prompts FROM system_prompts;
+SELECT COUNT(*) as history FROM prompt_history;
+SELECT COUNT(*) as settings FROM admin_settings;
+SELECT COUNT(*) as edit_history FROM edit_history;
+
+-- Check for projects with NULL files_json
+SELECT id, name FROM projects WHERE files_json IS NULL;
+
+-- Check build state
+SELECT * FROM admin_settings;
+```
+
+### 2.3 Build Pipeline Check
+
+Test a minimal build end-to-end:
+```bash
+# Get auth token
+TOKEN=$(curl -s -X POST $BASE/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" \
+  | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8'); console.log(JSON.parse(d).token)")
+
+# Reset build state first
+curl -s -X POST $BASE/api/admin/reset-build \
+  -H "Authorization: Bearer $TOKEN"
+
+# Start a build
+curl -s -X POST $BASE/api/build \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"idea":"simple hello world page"}'
+
+# Poll status for 60 seconds
+for i in {1..12}; do
+  sleep 5
+  STATUS=$(curl -s $BASE/api/status | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d).status))")
+  echo "Status: $STATUS"
+  if [ "$STATUS" = "done" ] || [ "$STATUS" = "error" ]; then break; fi
+done
+
+curl -s $BASE/api/status | node -e "process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const r=JSON.parse(d);console.log('Final status:',r.status);console.log('Result URL:',r.result?.url);console.log('Error:',r.error)})"
+```
+
+### 2.4 Environment Variables Check
+
+```bash
+# Check all required env vars are set
+node -e "
+const required = [
+  'ANTHROPIC_API_KEY',
+  'GITHUB_TOKEN', 
+  'VERCEL_TOKEN',
+  'OPENAI_API_KEY',
+  'RECRAFT_API_KEY',
+  'REPLICATE_API_TOKEN',
+  'ADMIN_EMAIL',
+  'ADMIN_PASSWORD',
+  'CUSTOM_DOMAIN',
+  'JWT_SECRET',
+  'DATABASE_URL'
+]
+required.forEach(key => {
+  const val = process.env[key]
+  console.log(key + ': ' + (val ? '✅ set (' + val.substring(0,8) + '...)' : '❌ MISSING'))
+})"
+```
+
+### 2.5 Static Files Check
+
+```bash
+# Check all public files exist
+ls -la artifacts/api-server/public/
+# Expected files:
+# landing.html, index.html, admin.html, dashboard.html
+# editor.html, login.html, register.html
+# logo.png, goldy-mascot.png, boris.png, masha.png, ivan.png, petya.png
+```
+
+### 2.6 Build State Check
+
+```bash
+# Check if build state resets on startup
+grep -n "state.status\|state.stage\|resetState\|idle" \
+  artifacts/api-server/src/app.ts \
+  artifacts/api-server/src/routes/build.ts | head -20
+```
+
+---
+
+## Part 3 — Fix All Found Issues
+
+After the audit, fix issues in this priority order:
+
+### Priority 1 — Blocking (platform doesn't work)
+- Server not starting (Bad Gateway)
+- Build pipeline failing
+- Auth not working
+
+### Priority 2 — Important (features broken)
+- Stuck build state
+- Preview not updating
+- Import failing
+
+### Priority 3 — Polish (UX issues)
+- Missing env vars warnings
+- Console errors
+- Broken links
+
+---
+
+## Part 4 — Final Verification
+
+After all fixes, run a complete end-to-end test:
+
+1. ✅ Open `goldy-ai-builder.replit.app` — landing page loads
+2. ✅ Register new account
+3. ✅ Login
+4. ✅ Build a project: "Simple todo app"
+5. ✅ See conversational logs from Goldy crew
+6. ✅ Get live URL on goldy.team
+7. ✅ Open editor — preview works
+8. ✅ Make an edit — preview updates
+9. ✅ Deploy — goldy.team updates
+10. ✅ Admin panel loads with stats
+11. ✅ Import from GitHub URL works
+
+Report each step as ✅ / ⚠️ / ❌ with exact error if failing.
+
+---
+
+## Expected Output
+
+A complete report like this:
+
+```
+=== GOLDY BUILDS SYSTEM AUDIT ===
+
+DEPLOYMENT
+✅ Server starts on correct port
+✅ pnpm build succeeds
+✅ goldy-ai-builder.replit.app loads
+
+API ENDPOINTS  
+✅ POST /api/auth/register → 200
+✅ POST /api/auth/login → 200
+✅ GET /api/status → 200
+✅ POST /api/roadmap → 200
+❌ GET /api/preview/1 → 500 (files_json parse error)
+
+DATABASE
+✅ All 7 tables exist
+✅ 5 users, 5 projects
+⚠️ 2 projects have NULL files_json
+
+ENVIRONMENT
+✅ ANTHROPIC_API_KEY set
+✅ GITHUB_TOKEN set
+❌ REPLICATE_API_TOKEN missing
+
+BUILD PIPELINE
+✅ Reset works
+✅ Build starts
+✅ Completes in 4m 22s
+✅ URL generated: hello-world.goldy.team
+
+ISSUES FOUND AND FIXED:
+1. ❌→✅ Server listening on 127.0.0.1 instead of 0.0.0.0
+2. ❌→✅ REPLICATE_API_TOKEN not in deployment secrets
+3. ⚠️→✅ 2 old projects had NULL files_json — not a bug, just old data
+```
+
+---
+
+## Start here
+
+Begin with Part 1 (deployment fix) immediately.
+Do not stop until goldy-ai-builder.replit.app loads correctly.
+Then run the full audit.

@@ -9,8 +9,8 @@ id = "artifacts/mockup-sandbox"
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
-run = ["sh", "-c", "pnpm --filter @workspace/api-server run start"]
-build = ["sh", "-c", "pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"]
+run = ["pnpm", "--filter", "@workspace/api-server", "run", "start"]
+build = ["pnpm", "--filter", "@workspace/api-server", "run", "build"]
 
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
