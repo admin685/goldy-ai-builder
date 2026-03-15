@@ -250,15 +250,69 @@ function parseFilesJson(raw: string): Record<string, string> | null {
   }
 }
 
+// Inline local CSS/JS into HTML so preview is self-contained.
+// CDN URLs (containing "://") are left untouched.
+function inlineAssets(html: string, files: Record<string, string>): string {
+  const isLocal = (url: string) => !/^https?:\/\/|^\/\//.test(url);
+  const resolve = (href: string) => href.replace(/^\.\//, "");
+
+  // <link rel="stylesheet" href="local.css"> — rel before href
+  html = html.replace(
+    /<link\b([^>]*)\brel=["']stylesheet["']([^>]*)\bhref=["']([^"']+)["']([^>]*)>/gi,
+    (match, b, c, href, d) => {
+      if (!isLocal(href)) return match;
+      const content = files[resolve(href)];
+      if (content == null) return match;
+      return `<style>/* inlined: ${resolve(href)} */\n${content}\n</style>`;
+    }
+  );
+
+  // <link href="local.css" rel="stylesheet"> — href before rel
+  html = html.replace(
+    /<link\b([^>]*)\bhref=["']([^"']+)["']([^>]*)\brel=["']stylesheet["']([^>]*)>/gi,
+    (match, b, href, c, d) => {
+      if (!isLocal(href)) return match;
+      const content = files[resolve(href)];
+      if (content == null) return match;
+      return `<style>/* inlined: ${resolve(href)} */\n${content}\n</style>`;
+    }
+  );
+
+  // <script src="local.js"></script>
+  html = html.replace(
+    /<script\b([^>]*)\bsrc=["']([^"']+)["']([^>]*)><\/script>/gi,
+    (match, before, src, after) => {
+      if (!isLocal(src)) return match;
+      const content = files[resolve(src)];
+      if (content == null) return match;
+      return `<script${before}${after}>/* inlined: ${resolve(src)} */\n${content}\n</script>`;
+    }
+  );
+
+  return html;
+}
+
 const PLACEHOLDER_HTML = (msg: string) =>
   `<!DOCTYPE html><html><body style='font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;color:#888'><p>${msg}</p></body></html>`;
 
+// Helper: load files from pending state or DB
+async function resolveFiles(projectId: number, usePending: boolean): Promise<Record<string, string> | null> {
+  if (usePending) {
+    const s = editStates.get(projectId);
+    if (s?.pendingFiles) return s.pendingFiles;
+  }
+  const project = await queryOne<{ files_json: string | null }>(
+    "SELECT files_json FROM projects WHERE id = $1",
+    [projectId]
+  );
+  if (!project?.files_json) return null;
+  return parseFilesJson(project.files_json);
+}
+
+// GET /preview/:projectId — returns self-contained HTML with inlined CSS/JS
 router.get("/preview/:projectId", async (req, res) => {
   const projectId = Number(req.params["projectId"]);
-  if (!projectId) {
-    res.status(400).send("Invalid project ID");
-    return;
-  }
+  if (!projectId) { res.status(400).send("Invalid project ID"); return; }
 
   res.setHeader("Content-Type", "text/html");
   res.setHeader("X-Frame-Options", "SAMEORIGIN");
@@ -266,35 +320,70 @@ router.get("/preview/:projectId", async (req, res) => {
 
   try {
     const pending = req.query["pending"] === "1";
+
+    // First try pending state; fall through to DB
+    let files: Record<string, string> | null = null;
     if (pending) {
       const s = editStates.get(projectId);
-      if (s?.pendingFiles) {
-        const html = findHtmlContent(s.pendingFiles);
-        if (html) { res.send(html); return; }
-      }
+      files = s?.pendingFiles ?? null;
+    }
+    if (!files) {
+      const project = await queryOne<{ files_json: string | null }>(
+        "SELECT files_json FROM projects WHERE id = $1",
+        [projectId]
+      );
+      if (!project) { res.status(404).send("Project not found"); return; }
+      if (!project.files_json) { res.send(PLACEHOLDER_HTML("No files yet — send an edit to get started.")); return; }
+      files = parseFilesJson(project.files_json);
     }
 
-    const project = await queryOne<{ files_json: string | null }>(
-      "SELECT files_json FROM projects WHERE id = $1",
-      [projectId]
-    );
-
-    if (!project) { res.status(404).send("Project not found"); return; }
-    if (!project.files_json) { res.send(PLACEHOLDER_HTML("No files yet — send an edit to get started.")); return; }
-
-    console.log('PREVIEW REQUEST: projectId:', projectId);
-    console.log('PREVIEW: files_json type:', typeof project.files_json);
-    const files = parseFilesJson(project.files_json);
-    console.log('PREVIEW: files keys:', Object.keys(files || {}).slice(0, 5));
-    console.log('PREVIEW: index.html length:', (files as Record<string,string> | null)?.['index.html']?.length);
     if (!files) { res.status(500).send("Failed to parse project files"); return; }
 
-    const html = findHtmlContent(files);
-    if (!html) { res.send(PLACEHOLDER_HTML("No HTML file found in this project.")); return; }
+    console.log('PREVIEW REQUEST: projectId:', projectId, 'pending:', pending);
+    console.log('PREVIEW: files keys:', Object.keys(files).slice(0, 5));
+    console.log('PREVIEW: index.html length:', files['index.html']?.length);
 
+    const rawHtml = findHtmlContent(files);
+    if (!rawHtml) { res.send(PLACEHOLDER_HTML("No HTML file found in this project.")); return; }
+
+    const html = inlineAssets(rawHtml, files);
     res.send(html);
   } catch (e) {
     console.error("Preview route error:", e);
+    res.status(500).send("Server error");
+  }
+});
+
+// GET /preview/:projectId/:filename — serve individual files (CSS, JS, etc.) from files_json
+router.get("/preview/:projectId/:filename", async (req, res) => {
+  const projectId = Number(req.params["projectId"]);
+  const filename = req.params["filename"];
+  if (!projectId || !filename) { res.status(400).send("Invalid params"); return; }
+
+  const CONTENT_TYPES: Record<string, string> = {
+    css: "text/css",
+    js: "application/javascript",
+    mjs: "application/javascript",
+    json: "application/json",
+    svg: "image/svg+xml",
+    txt: "text/plain",
+    html: "text/html",
+  };
+
+  try {
+    const pending = req.query["pending"] === "1";
+    const files = await resolveFiles(projectId, pending);
+    if (!files) { res.status(404).send("Project not found"); return; }
+
+    const content = files[filename];
+    if (content == null) { res.status(404).send(`File not found: ${filename}`); return; }
+
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    res.setHeader("Content-Type", CONTENT_TYPES[ext] ?? "text/plain");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.send(content);
+  } catch (e) {
+    console.error("Preview file route error:", e);
     res.status(500).send("Server error");
   }
 });
