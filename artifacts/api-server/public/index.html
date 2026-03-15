@@ -1280,15 +1280,14 @@ textarea#idea::placeholder { color: var(--text-muted); }
   }
 
   function getCrewAvatar(msg) {
-    if (msg.includes('Stage 1') || msg.includes('Analyzing') || msg.includes('Claude') || msg.includes('Stage 3') || msg.includes('code') || msg.includes('Assembl'))
-      return '/goldy-mascot.png';
-    if (msg.includes('CSS') || msg.includes('GPT') || msg.includes('Boris') || msg.includes('Design'))
+    const m = msg.toLowerCase();
+    if (m.includes('css') || m.includes('gpt') || m.includes('boris') || m.includes('design'))
       return '/boris.png';
-    if (msg.includes('logo') || msg.includes('Recraft') || msg.includes('Masha'))
+    if (m.includes('logo') || m.includes('recraft') || m.includes('masha'))
       return '/masha.png';
-    if (msg.includes('image') || msg.includes('FLUX') || msg.includes('Ivan'))
+    if (m.includes('image') || m.includes('flux') || m.includes('ivan'))
       return '/ivan.png';
-    if (msg.includes('GitHub') || msg.includes('Vercel') || msg.includes('Deploy') || msg.includes('Petya') || msg.includes('Storage'))
+    if (m.includes('github') || m.includes('vercel') || m.includes('deploy') || m.includes('petya') || m.includes('storage'))
       return '/petya.png';
     return '/goldy-mascot.png';
   }
