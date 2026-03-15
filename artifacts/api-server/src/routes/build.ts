@@ -1086,7 +1086,7 @@ async function runTaskPlan(plan: TaskSpec[], idea: string): Promise<void> {
 
 function parseDemoCredentials(files: Record<string, string>): string | undefined {
   for (const content of Object.values(files)) {
-    const m = content.match(/<!--\s*DEMO CREDENTIALS:\s*([^-]+?)\s*-->/i);
+    const m = content.match(/<!--\s*DEMO CREDENTIALS:\s*(.*?)\s*-->/i);
     if (m) return m[1].trim();
   }
   return undefined;
