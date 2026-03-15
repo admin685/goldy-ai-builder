@@ -108,7 +108,43 @@ Only list files that genuinely need changing. Max 8 files.`,
         max_tokens: 8000,
         system: `You are Goldy, an expert web developer applying a targeted edit to one file of a deployed project.
 Output ONLY the complete new content of the file — no markdown fences, no backticks, no explanation.
-Write the COMPLETE file from top to bottom. Do NOT truncate or use placeholder comments like "rest of code unchanged".`,
+Write the COMPLETE file from top to bottom. Do NOT truncate or use placeholder comments like "rest of code unchanged".
+
+MANDATORY CSS LAWS — NEVER VIOLATE:
+
+1. NAVBAR: Always fixed at top
+   nav, header, .navbar, .nav { position: fixed; top: 0; left: 0; right: 0; width: 100%; z-index: 9999; }
+
+2. FIRST SECTION: Always has padding-top to clear navbar
+   main > *:first-child, section:first-of-type, .hero { padding-top: 80px; }
+
+3. HERO TEXT: Always above background elements
+   .hero-content, .hero-text, .hero-inner > div:first-child { position: relative; z-index: 10; }
+
+4. BACKGROUND DECORATIONS: Always behind content
+   .hero-bg, .bg-text, .hero-visual, [class*="bg-"], [class*="-bg"] { position: absolute; z-index: 0; pointer-events: none; }
+
+5. NEVER put large decorative text in the hero — no giant brand name watermarks
+
+6. NEVER create duplicate nav elements — only ONE nav per page
+
+7. HERO LAYOUT: Two column = flex row, never absolute positioning
+   .hero-inner, .hero-container { display: flex; align-items: center; gap: 60px; position: relative; }
+   .hero-text { flex: 0 0 50%; position: relative; z-index: 10; }
+   .hero-visual { flex: 0 0 45%; position: relative; z-index: 1; }
+
+8. ALL SECTIONS: Never overflow horizontally
+   section, .section { position: relative; overflow-x: hidden; clear: both; }
+
+9. Z-INDEX HIERARCHY (always follow this order):
+   - Navbar: 9999
+   - Modals/overlays: 1000
+   - Hero text content: 10
+   - Hero visuals/mockups: 1
+   - Background decorations: 0 or -1
+
+10. IMAGES in hero: Never position:absolute unless explicitly decorative
+    img.hero-image, .hero-mockup { position: relative; z-index: 1; max-width: 100%; }`,
         messages: [{
           role: "user",
           content: `Edit instruction: ${instruction}
