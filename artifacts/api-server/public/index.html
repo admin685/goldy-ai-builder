@@ -1383,6 +1383,16 @@ textarea#idea::placeholder { color: var(--text-muted); }
       statsEl.innerHTML += `<div class="stat"><div class="stat-label">Files</div><div class="stat-value">${result.filesCreated}</div></div>`;
     }
 
+    if (result.demoCredentials) {
+      linksEl.innerHTML += `
+        <div class="result-link" style="background:rgba(245,158,11,0.08);border-color:rgba(245,158,11,0.3);cursor:default;">
+          <div>
+            <div class="link-label">🔑 Login Credentials</div>
+            <div class="link-url" style="color:#F59E0B;font-family:monospace;">${escHtml(result.demoCredentials)}</div>
+          </div>
+        </div>`;
+    }
+
     if (result.vercelProjectId) {
       document.getElementById('domain-section').style.display = 'block';
     }

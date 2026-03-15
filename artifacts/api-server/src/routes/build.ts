@@ -34,7 +34,7 @@ async function generateCSSWithGPT(idea: string, projectName: string): Promise<st
     return "";
   }
 
-  log("▶ Boris is designing the interior...", "info");
+  log("Boris is sketching the interior design... He says it'll look premium!", "info");
 
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
@@ -89,7 +89,7 @@ async function generateHeroImageWithFLUX(idea: string): Promise<string> {
     return "";
   }
 
-  log("▶ Ivan is taking photos of the site...", "info");
+  log("Ivan is setting up his camera — hero image incoming!", "info");
 
   const prompt = `Professional hero image for a web app: ${idea}. Cinematic lighting, modern UI aesthetic, dark atmospheric background, photorealistic, 4k quality, no text, no UI elements.`;
 
@@ -160,7 +160,7 @@ async function generateLogoWithRecraft(projectName: string, idea: string): Promi
     return "";
   }
 
-  log("▶ Masha is painting the logo...", "info");
+  log("Masha grabbed her paintbrush — logo coming up!", "info");
 
   const prompt = `minimalist flat vector logo icon for ${projectName}, single geometric shape, bold, professional, no text, clean`;
 
@@ -199,7 +199,7 @@ async function generateLogoWithRecraft(projectName: string, idea: string): Promi
 }
 
 export async function runDesignPipeline(idea: string, projectName: string): Promise<DesignAssets> {
-  log("▶ Boris, Ivan, and Masha are starting their work...", "info");
+  log("Boris, Ivan, and Masha are rolling up their sleeves...", "info");
 
   const [css, heroImageUrl, logoSvg] = await Promise.all([
     generateCSSWithGPT(idea, projectName).catch((e) => {
@@ -263,6 +263,7 @@ export interface BuildState {
     projectId?: number;
     vercelProjectId?: string;
     deploymentName?: string;
+    demoCredentials?: string;
   };
   error?: string;
   idea?: string;
@@ -293,7 +294,7 @@ export function resetState(idea: string, userId?: number) {
   state.idea = idea;
   state.userId = userId;
   state.startedAt = Date.now();
-  log("▶ Goldy is reviewing the blueprints...", "info");
+  log("Goldy here! Let me read the blueprints...", "info");
 }
 
 const BUILD_TIMEOUT_MS = 20 * 60 * 1000;
@@ -304,7 +305,7 @@ export function clearIfTimedOut(): boolean {
   console.log("[Goldy] [WARN] Build auto-reset: timed out after 20 minutes");
   state.status = "idle";
   state.stage = "";
-  state.error = "Previous build timed out after 20 minutes — auto-reset";
+  state.error = "Goldy here — this project is huge, crew needs more time. Try a simpler version first!";
   state.startedAt = undefined;
   return true;
 }
@@ -615,7 +616,7 @@ Output ONLY the JSON array. No explanation.`);
 
 async function handleAnalyze(idea: string): Promise<void> {
   state.stage = "analyze";
-  log("▶ Goldy is reviewing the blueprints...", "info");
+  log(`Goldy here! Reading the blueprints for ${idea.slice(0, 60)}...`, "info");
 
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -644,12 +645,12 @@ No markdown, no explanation.`);
   state.stageData.description = parsed.description ?? "Built by Goldy AI";
   state.stageData.fileList = parsed.files_to_generate ?? ["index.html", "README.md"];
 
-  log(`✓ Goldy has the plan — "${state.stageData.projectName}" · ${state.stageData.fileList.length} files to build`, "success");
+  log(`Got it, we're building ${state.stageData.description}! ${state.stageData.fileList.length} files to write.`, "success");
 }
 
 async function handleGpt4oCSS(idea: string): Promise<void> {
   state.stage = "design:css";
-  log("▶ Boris is designing the interior...", "info");
+  log("Boris is sketching the interior design... He says it'll look premium!", "info");
 
   const apiKey = process.env["OPENAI_API_KEY"];
   if (!apiKey) { log("Boris is off duty — no API key, skipping CSS", "warn"); return; }
@@ -698,7 +699,7 @@ Max 1500 tokens. Create a concise design system with:
 
 async function handleRecraft(idea: string): Promise<void> {
   state.stage = "design:logo";
-  log("▶ Masha is painting the logo...", "info");
+  log("Masha grabbed her paintbrush — logo coming up!", "info");
 
   const apiKey = process.env["RECRAFT_API_KEY"];
   if (!apiKey) { log("Masha is off duty — no API key, skipping logo", "warn"); return; }
@@ -731,7 +732,7 @@ async function handleRecraft(idea: string): Promise<void> {
 
 async function handleFlux(idea: string): Promise<void> {
   state.stage = "design:image";
-  log("▶ Ivan is taking photos of the site...", "info");
+  log("Ivan is setting up his camera — hero image incoming!", "info");
 
   const token = process.env["REPLICATE_API_TOKEN"];
   if (!token) { log("Ivan is off duty — no API key, skipping photos", "warn"); return; }
@@ -861,7 +862,15 @@ MANDATORY CSS LAWS — NEVER VIOLATE:
    - Background decorations: 0 or -1
 
 10. IMAGES in hero: Never position:absolute unless explicitly decorative
-    img.hero-image, .hero-mockup { position: relative; z-index: 1; max-width: 100%; }`);
+    img.hero-image, .hero-mockup { position: relative; z-index: 1; max-width: 100%; }
+
+AUTHENTICATION PROJECTS — DEMO CREDENTIALS:
+If the project includes any login, sign-up, or admin page, you MUST:
+1. Create working demo accounts hardcoded in the JavaScript logic.
+2. Add this HTML comment to index.html (use the actual project name):
+   <!-- DEMO CREDENTIALS: admin@{project-name}.com / Admin123! | user@{project-name}.com / User123! -->
+3. Show a dismissible yellow banner on the login page:
+   <div class="demo-banner">Demo login: admin@{project-name}.com / Admin123!</div>`);
 
   const user = `Project: "${projectName}"
 Description: ${description}
@@ -892,7 +901,7 @@ Original idea: ${idea}`;
 
 async function handleCode(idea: string): Promise<void> {
   state.stage = "code";
-  log("▶ Goldy is building the structure...", "info");
+  log("Crew is hammering away — time to build!", "info");
 
   const apiKey = process.env["ANTHROPIC_API_KEY"];
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY is not set");
@@ -931,7 +940,7 @@ async function handleCode(idea: string): Promise<void> {
   const generatedFiles: Record<string, string> = {};
 
   for (const filename of ordered) {
-    log(`  ▶ Writing ${filename}...`, "info");
+    log(`  Goldy is writing ${filename}...`, "info");
     const content = await generateSingleFile(
       filename, projectName, description, ordered, generatedFiles, idea, designHints, client
     );
@@ -946,7 +955,7 @@ async function handleCode(idea: string): Promise<void> {
 
 function handleAssemble(): void {
   state.stage = "assemble";
-  log("▶ Goldy is putting everything together...", "info");
+  log("Petya is packing everything into boxes...", "info");
 
   const files = state.stageData.files ?? {};
   const css = state.stageData.css ?? "";
@@ -998,7 +1007,7 @@ function handleAssemble(): void {
 
 async function handleDeploy(): Promise<void> {
   state.stage = "deploy";
-  log("▶ Petya is packing up, Vasya is ready to deliver...", "info");
+  log("Petya packed the boxes — Vasya just hit the road!", "info");
 
   const files = state.stageData.files ?? {};
   const projectName = state.stageData.projectName ?? "goldy-project";
@@ -1075,9 +1084,17 @@ async function runTaskPlan(plan: TaskSpec[], idea: string): Promise<void> {
   }
 }
 
+function parseDemoCredentials(files: Record<string, string>): string | undefined {
+  for (const content of Object.values(files)) {
+    const m = content.match(/<!--\s*DEMO CREDENTIALS:\s*([^-]+?)\s*-->/i);
+    if (m) return m[1].trim();
+  }
+  return undefined;
+}
+
 async function runBuild(idea: string) {
   try {
-    log("▶ Goldy is calling the crew together...", "info");
+    log("Goldy is calling the crew together...", "info");
     const plan = await getTaskPlanFromClaude(idea);
     log(`Crew assignments: ${plan.map((t) => `${t.agent}:${t.task}`).join(" → ")}`, "info");
 
@@ -1116,12 +1133,24 @@ async function runBuild(idea: string) {
       deploymentName: state.stageData.deploymentName ?? undefined,
     };
 
-    log(`✓ Crew knocked it out! ${Object.keys(files).length} files built.`, "success");
+    const creds = parseDemoCredentials(files);
+    if (creds) {
+      state.result.demoCredentials = creds;
+      log(`🔑 Demo credentials: ${creds}`, "success");
+    }
+
+    const elapsedSecs = state.startedAt ? Math.round((Date.now() - state.startedAt) / 1000) : 0;
+    log(`DONE! Goldy & Crew delivered ${projectName} in ${elapsedSecs}s. Here's your keys! 🔑`, "success");
   } catch (err) {
     state.status = "error";
     state.stage = "error";
     state.error = (err as Error).message;
-    log(`Build failed: ${(err as Error).message}`, "error");
+    const errMsg = (err as Error).message;
+    if (errMsg.includes("API") || errMsg.includes("fetch") || errMsg.includes("token") || errMsg.includes("key")) {
+      log(`Goldy here — one of the crew's tools broke: ${errMsg}`, "error");
+    } else {
+      log(`Goldy here — something went wrong on site: ${errMsg}`, "error");
+    }
   }
 }
 
@@ -1205,7 +1234,7 @@ router.post("/build", requireAuth, (req, res) => {
 
   clearIfTimedOut();
   if (state.status === "building") {
-    res.status(409).json({ error: "A build is already in progress" });
+    res.status(409).json({ error: "Hold on — Goldy & Crew are still working on the current project!" });
     return;
   }
 
