@@ -3,7 +3,7 @@ import { initDb } from "./lib/init-db.js";
 import { seedAdmin } from "./lib/seed-admin.js";
 import { startWeeklyJob } from "./lib/weeklyJob.js";
 
-const rawPort = process.env["PORT"] || "3000";
+const rawPort = process.env["PORT"] || "8080";
 
 const port = parseInt(rawPort, 10);
 if (Number.isNaN(port) || port <= 0) {
