@@ -54,7 +54,7 @@ function elog(s: EditState, msg: string, type: EditLog["type"] = "info") {
   console.log(`[Edit][${type.toUpperCase()}] ${msg}`);
 }
 
-// ── Preview pipeline: Claude edits → temp Vercel deploy (no DB write) ─────
+// ── Preview pipeline: Claude edits → save to DB → preview ready ───────────
 
 async function runEdit(
   project: ProjectRow,
