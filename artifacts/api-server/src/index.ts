@@ -11,8 +11,19 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 async function main() {
-  await initDb();
-  await seedAdmin();
+  try {
+    await initDb();
+  } catch (err) {
+    console.error("DATABASE CONNECTION ERROR:", err);
+    process.exit(1);
+  }
+
+  try {
+    await seedAdmin();
+  } catch (err) {
+    console.error("SEED ADMIN ERROR:", err);
+  }
+
   app.listen(port, "0.0.0.0", () => {
     console.log(`Server listening on 0.0.0.0:${port}`);
     void startWeeklyJob();
