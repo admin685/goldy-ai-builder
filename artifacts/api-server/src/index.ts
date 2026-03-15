@@ -3,9 +3,9 @@ import { initDb } from "./lib/init-db.js";
 import { seedAdmin } from "./lib/seed-admin.js";
 import { startWeeklyJob } from "./lib/weeklyJob.js";
 
-const rawPort = process.env["PORT"] || "80";
+const rawPort = process.env["PORT"] || "3000";
 
-const port = Number(rawPort);
+const port = parseInt(rawPort, 10);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
