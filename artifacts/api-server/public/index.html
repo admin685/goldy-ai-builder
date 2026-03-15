@@ -485,7 +485,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
   line-height: 1.65;
 }
 
-.log-entry { display: flex; gap: 12px; padding: 1px 0; }
+.log-entry { display: flex; gap: 8px; padding: 2px 0; align-items: center; }
+.log-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .log-time { color: var(--text-muted); min-width: 65px; font-size: 0.77rem; flex-shrink: 0; }
 .log-msg-info    { color: var(--text-muted); }
 .log-msg-success { color: var(--green); }
@@ -1278,6 +1279,20 @@ textarea#idea::placeholder { color: var(--text-muted); }
     }, 1500);
   }
 
+  function getCrewAvatar(msg) {
+    if (msg.includes('Stage 1') || msg.includes('Analyzing') || msg.includes('Claude') || msg.includes('Stage 3') || msg.includes('code') || msg.includes('Assembl'))
+      return '/goldy-mascot.png';
+    if (msg.includes('CSS') || msg.includes('GPT') || msg.includes('Boris') || msg.includes('Design'))
+      return '/boris.png';
+    if (msg.includes('logo') || msg.includes('Recraft') || msg.includes('Masha'))
+      return '/masha.png';
+    if (msg.includes('image') || msg.includes('FLUX') || msg.includes('Ivan'))
+      return '/ivan.png';
+    if (msg.includes('GitHub') || msg.includes('Vercel') || msg.includes('Deploy') || msg.includes('Petya') || msg.includes('Storage'))
+      return '/petya.png';
+    return '/goldy-mascot.png';
+  }
+
   function appendLogs(logs) {
     const panel = document.getElementById('log-panel');
     for (let i = lastLogCount; i < logs.length; i++) {
@@ -1286,16 +1301,8 @@ textarea#idea::placeholder { color: var(--text-muted); }
       const t     = new Date(entry.ts).toLocaleTimeString();
       const div   = document.createElement('div');
       div.className = 'log-entry';
-      let icon = '';
-      if (msg.includes('Stage 1') || msg.includes('Analyzing'))  icon = '🔍 ';
-      else if (msg.includes('CSS') || msg.includes('GPT'))       icon = '🎨 ';
-      else if (msg.includes('logo') || msg.includes('Recraft'))  icon = '🖼 ';
-      else if (msg.includes('image') || msg.includes('FLUX'))    icon = '📸 ';
-      else if (msg.includes('Stage 3') || msg.includes('Claude:') || msg.includes('code')) icon = '🧠 ';
-      else if (msg.includes('Assembl'))                          icon = '🔧 ';
-      else if (msg.includes('GitHub') || msg.includes('Vercel') || msg.includes('Deploy')) icon = '🚀 ';
-      else if (msg.includes('live') || msg.includes('complete') || msg.includes('done'))   icon = '✅ ';
-      div.innerHTML = `<span class="log-time">${t}</span><span class="log-msg-${entry.type}">${icon}${escHtml(msg)}</span>`;
+      const avatar = getCrewAvatar(msg);
+      div.innerHTML = `<img class="log-avatar" src="${avatar}" alt=""><span class="log-time">${t}</span><span class="log-msg-${entry.type}">${escHtml(msg)}</span>`;
       panel.appendChild(div);
     }
     panel.scrollTop = panel.scrollHeight;

@@ -385,6 +385,69 @@ h1.hero-title {
   margin-bottom: 1rem;
 }
 
+.crew-section {
+  padding: 80px 0;
+}
+.crew-section .container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  text-align: center;
+}
+.crew-section h2 {
+  font-family: Syne, sans-serif;
+  font-size: 2rem;
+  margin: 0 0 0.5rem;
+  background: linear-gradient(135deg, #F59E0B, #FBBF24);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.crew-section > .container > p {
+  color: var(--muted);
+  font-size: 1rem;
+  margin: 0 0 2.5rem;
+}
+.crew-grid {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+.crew-member {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem 1rem;
+  width: 180px;
+  text-align: center;
+  transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+}
+.crew-member:hover {
+  transform: translateY(-6px);
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+}
+.crew-member img {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 0.75rem;
+  border: 2px solid var(--border);
+}
+.crew-member h3 {
+  font-family: Syne, sans-serif;
+  font-size: 1rem;
+  margin: 0 0 0.35rem;
+  color: var(--text);
+}
+.crew-member p {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
 #demo {
   padding: 5rem 2rem;
   background: var(--surface);
@@ -747,6 +810,10 @@ nav#main-nav.scrolled {
   .step-connector { display: none; }
   .features-grid { grid-template-columns: 1fr; }
   .steps-grid { grid-template-columns: 1fr; }
+  .crew-grid { gap: 1rem; }
+  .crew-member { width: calc(50% - 0.5rem); }
+  .crew-member img { width: 90px; height: 90px; }
+  .crew-section { padding: 3rem 1rem; }
   #hero { padding: 80px 1rem 3rem; }
   #how-it-works, #features { padding: 3rem 1rem; }
   #demo { padding: 3rem 1rem; }
@@ -855,7 +922,7 @@ nav#main-nav.scrolled {
       <!-- Goldy mascot -->
       <div class="mascot-wrap hero-mascot">
         <img
-          src="https://img.recraft.ai/8Ww5s4CjVkdgADJn7OL_QNYIlupN2z4QRqJ3-H9LI_M/rs:fit:1024:1024:0/raw:1/plain/abs://external/images/d2250e3b-f7bd-4530-a5b1-1cfd8990f6a3"
+          src="/goldy-mascot.png"
           alt="Goldy — construction foreman mascot"
         />
       </div>
@@ -948,6 +1015,41 @@ nav#main-nav.scrolled {
           <span class="feat-icon">🔧</span>
           <div class="feat-title">Any Project Type</div>
           <p class="feat-desc">Todo apps, portfolios, SaaS landing pages, dashboards, tools, games — if it runs as static HTML/CSS/JS, Goldy can build it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Meet the Crew ── -->
+  <section class="crew-section">
+    <div class="container">
+      <h2>Meet the Crew</h2>
+      <p>6 AI specialists working in parallel on every project</p>
+      <div class="crew-grid">
+        <div class="crew-member">
+          <img src="/goldy-mascot.png" alt="Goldy">
+          <h3>Goldy</h3>
+          <p>The Boss — Claude AI<br>Analyzes &amp; writes code</p>
+        </div>
+        <div class="crew-member">
+          <img src="/boris.png" alt="Boris">
+          <h3>Boris</h3>
+          <p>Designer — GPT-4o<br>Creates CSS &amp; UI</p>
+        </div>
+        <div class="crew-member">
+          <img src="/masha.png" alt="Masha">
+          <h3>Masha</h3>
+          <p>Artist — Recraft<br>Generates logos</p>
+        </div>
+        <div class="crew-member">
+          <img src="/ivan.png" alt="Ivan">
+          <h3>Ivan</h3>
+          <p>Photographer — FLUX<br>Creates hero images</p>
+        </div>
+        <div class="crew-member">
+          <img src="/petya.png" alt="Petya">
+          <h3>Petya</h3>
+          <p>Storage — GitHub<br>Saves all code</p>
         </div>
       </div>
     </div>
