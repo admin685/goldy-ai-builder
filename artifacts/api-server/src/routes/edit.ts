@@ -127,11 +127,22 @@ ${contextSnippets}`,
     }
 
     elog(s, `✓ Goldy updated ${filesToEdit.length} file${filesToEdit.length !== 1 ? "s" : ""}`, "success");
+
+    console.log('Saving files to DB, count:', Object.keys(updatedFiles).length);
+    try {
+      await queryOne(
+        "UPDATE projects SET files_json = $1 WHERE id = $2",
+        [JSON.stringify(updatedFiles), project.id]
+      );
+      elog(s, "✓ Changes saved to database", "success");
+    } catch (dbErr) {
+      console.error("Failed to save files_json to DB:", dbErr);
+      elog(s, "⚠ Could not save to database — preview still available", "warn");
+    }
+
     elog(s, "✓ Preview ready — check the panel on the right.", "success");
     elog(s, "⏳ Waiting for your approval before going live...", "info");
 
-    // Store pending changes — do NOT write to DB or GitHub yet
-    // The iframe loads /api/preview/:id?pending=1 which serves these files
     s.pendingFiles = updatedFiles;
     s.pendingProject = project;
     s.status = "preview";
