@@ -23,7 +23,10 @@ const publicDir = path.join(__appdir, "..", "public");
 const serve = (name: string) => path.join(publicDir, name);
 
 // Static assets — served first so images/css/js are never blocked by route handlers
-app.use(express.static(publicDir));
+// index: false prevents express.static from auto-serving index.html at /, which
+// would shadow the explicit landing.html mapping below and redirect unauthenticated
+// users to /login.
+app.use(express.static(publicDir, { index: false }));
 
 // API routes
 app.use("/api", router);
